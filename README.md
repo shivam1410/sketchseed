@@ -6,6 +6,15 @@ open the app.
 The app never asks *"what do you want to draw today?"* — deciding is the part that
 kills the habit. It says *"here's today's sketch"* and gets out of the way.
 
+<p align="center">
+  <img src="docs/screenshots/01-today.png" width="30%" alt="Today: the day counter, one prompt, its difficulty, and an on-device drawing tip">
+  <img src="docs/screenshots/02-journey.png" width="30%" alt="Journey: completed days, streak, best streak and progress, over a grid of 100 days">
+  <img src="docs/screenshots/03-settings.png" width="30%" alt="Settings: Google Drive backup, plain zip export, and on-device AI">
+</p>
+<p align="center">
+  <em>Today · Journey · Settings — shown on a fresh install, so the grid is still locked.</em>
+</p>
+
 ## How the journey works
 
 The day number comes from the **calendar**, not from your personal progress. Day N is
