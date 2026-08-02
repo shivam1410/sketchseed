@@ -1,4 +1,4 @@
-# SketchSeed
+# Sketch Seed
 
 A 100-day drawing habit app for Android. One prompt a day, revealed only when you
 open the app.

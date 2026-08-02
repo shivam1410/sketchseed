@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">SketchSeed</string>
+    <!-- The user-visible name. Independent of applicationId, which stays
+         com.shivam.sketchseed and can never change once published. -->
+    <string name="app_name">Sketch Seed</string>
 
     <!-- Today -->
     <string name="day_counter">Day %1$d of %2$d</string>
@@ -88,6 +90,21 @@
     <string name="settings_backup_state_off">On this device only</string>
     <string name="settings_backup_quota_warning">Approaching the 25 MB backup limit. Older photos may not be backed up.</string>
     <string name="settings_backup_open_system">Open Android backup settings</string>
+
+    <string name="settings_drive_header">Google Drive backup</string>
+    <string name="settings_drive_explainer">Keeps a copy of your journey and every sketch in a SketchSeed folder in your own Google Drive. Unlike the automatic backup above it has no size limit, survives switching to a signed release build, and you can see and move the file yourself.</string>
+    <string name="settings_drive_backup_now">Back up to Drive now</string>
+    <string name="settings_drive_restore">Restore from Drive</string>
+    <string name="settings_drive_never">Not backed up to Drive yet</string>
+    <string name="settings_drive_last">Last Drive backup: %1$s</string>
+    <string name="settings_drive_signout">Disconnect Google Drive</string>
+    <string name="settings_drive_restore_confirm_title">Replace everything?</string>
+    <string name="settings_drive_restore_confirm_body">Restoring overwrites the journey and sketches on this phone with the copy in Drive. Anything on this phone that is not in the backup will be lost.</string>
+    <string name="settings_drive_restore_action">Restore</string>
+    <string name="settings_drive_backed_up">Backed up %1$s to Drive</string>
+    <string name="settings_drive_restored">Restored %1$d days and %2$d sketches</string>
+    <string name="settings_drive_none">No SketchSeed backup found in your Drive yet.</string>
+    <string name="settings_drive_signin_cancelled">Google sign-in was cancelled.</string>
 
     <string name="settings_ai_header">On-device AI</string>
     <string name="settings_ai_tips_title">Drawing tips</string>
