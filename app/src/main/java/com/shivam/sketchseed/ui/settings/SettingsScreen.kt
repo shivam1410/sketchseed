@@ -9,6 +9,8 @@ import android.text.format.Formatter
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts.CreateDocument
+import androidx.activity.result.contract.ActivityResultContracts.OpenDocument
 import androidx.activity.result.contract.ActivityResultContracts.StartIntentSenderForResult
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -59,6 +61,10 @@ import com.shivam.sketchseed.ai.TipAvailability
 import com.shivam.sketchseed.ui.components.SectionHeader
 
 private const val TAG = "SettingsScreen"
+private const val ZIP_MIME = "application/zip"
+
+/** Some file pickers hide zips behind a generic type, so offer both. */
+private const val ANY_MIME = "*/*"
 
 /** "2 hours ago" style, so the last-backup line reads at a glance. */
 private fun formatTimestamp(epochSecond: Long): String =
@@ -81,6 +87,14 @@ private fun driveMessageText(message: String): String = when {
         val bytes = message.substringAfter(':', "").toLongOrNull() ?: 0L
         stringResource(
             R.string.settings_drive_backed_up,
+            Formatter.formatShortFileSize(LocalContext.current, bytes),
+        )
+    }
+
+    message.startsWith(SettingsViewModel.EXPORTED) -> {
+        val bytes = message.substringAfter(':', "").toLongOrNull() ?: 0L
+        stringResource(
+            R.string.settings_file_exported,
             Formatter.formatShortFileSize(LocalContext.current, bytes),
         )
     }
@@ -126,6 +140,18 @@ fun SettingsScreen(
         } else {
             viewModel.onConsentDismissed()
         }
+    }
+
+    // Storage Access Framework: no permissions, and the user picks the location,
+    // so an exported backup can land anywhere including a different cloud.
+    val defaultExportName = stringResource(R.string.settings_file_default_name)
+    val exportLauncher = rememberLauncherForActivityResult(CreateDocument(ZIP_MIME)) { uri ->
+        uri?.let(viewModel::exportToFile)
+    }
+    var pendingImport by remember { mutableStateOf<android.net.Uri?>(null) }
+    val importLauncher = rememberLauncherForActivityResult(OpenDocument()) { uri ->
+        // Confirm before overwriting, same as the Drive restore.
+        pendingImport = uri
     }
 
     LaunchedEffect(consentRequest) {
@@ -303,6 +329,39 @@ fun SettingsScreen(
             HorizontalDivider()
             Spacer(Modifier.height(24.dp))
 
+            // ── Plain file export / import ───────────────────────────────────
+            SectionHeader(stringResource(R.string.settings_file_header))
+
+            Text(
+                text = stringResource(R.string.settings_file_explainer),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            OutlinedButton(
+                onClick = { exportLauncher.launch(defaultExportName) },
+                enabled = !state.driveBusy,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.settings_file_export))
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedButton(
+                onClick = { importLauncher.launch(arrayOf(ZIP_MIME, ANY_MIME)) },
+                enabled = !state.driveBusy,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.settings_file_import))
+            }
+
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(24.dp))
+
             // ── On-device AI ─────────────────────────────────────────────────
             SectionHeader(stringResource(R.string.settings_ai_header))
 
@@ -373,6 +432,32 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(40.dp))
         }
+    }
+
+    pendingImport?.let { uri ->
+        AlertDialog(
+            onDismissRequest = { pendingImport = null },
+            title = { Text(stringResource(R.string.settings_file_import_confirm_title)) },
+            text = { Text(stringResource(R.string.settings_file_import_confirm_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingImport = null
+                        viewModel.importFromFile(uri)
+                    },
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_drive_restore_action),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingImport = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
     }
 
     if (confirmingRestore) {

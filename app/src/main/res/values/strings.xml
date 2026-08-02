@@ -106,6 +106,15 @@
     <string name="settings_drive_none">No SketchSeed backup found in your Drive yet.</string>
     <string name="settings_drive_signin_cancelled">Google sign-in was cancelled.</string>
 
+    <string name="settings_file_header">Keep your own copy</string>
+    <string name="settings_file_explainer">The Drive copy is hidden, so you can\'t open or move it yourself. Export writes the same backup as an ordinary zip wherever you choose — Downloads, a USB stick, another cloud — and it restores into any build of the app. No account needed.</string>
+    <string name="settings_file_export">Export a copy…</string>
+    <string name="settings_file_import">Restore from a file…</string>
+    <string name="settings_file_default_name">sketchseed-backup.zip</string>
+    <string name="settings_file_exported">Exported %1$s</string>
+    <string name="settings_file_import_confirm_title">Replace everything?</string>
+    <string name="settings_file_import_confirm_body">Restoring from a file overwrites the journey and sketches on this phone. Anything not in that file will be lost.</string>
+
     <string name="settings_ai_header">On-device AI</string>
     <string name="settings_ai_tips_title">Drawing tips</string>
     <string name="settings_ai_tips_summary">Generate a short tip for a prompt using Gemini Nano. Runs entirely on your phone; nothing is uploaded.</string>

@@ -49,59 +49,42 @@ class DriveException(
  * A minimal Drive v3 client, speaking REST directly.
  *
  * The official `google-api-services-drive` client would drag in a large stack of
- * transitive dependencies for the five calls this app makes, so these are hand
+ * transitive dependencies for the four calls this app makes, so these are hand
  * written against the documented endpoints instead.
  *
- * Everything is scoped by `drive.file`, meaning Drive only ever shows this app
- * the files it created itself. Listing therefore cannot see, and cannot touch,
- * anything else in the user's Drive.
+ * Everything lives in the **appDataFolder** space: a per-app hidden folder that
+ * does not appear anywhere in the Drive interface and that no other app can
+ * read. Listing is confined to that space, so this client cannot see anything
+ * else in the user's Drive even accidentally.
  */
 class DriveClient(
     private val http: OkHttpClient = OkHttpClient(),
     private val json: Json = appJson,
 ) {
 
-    /** @return the id of the app's backup folder, creating it if needed. */
-    suspend fun findOrCreateFolder(token: String, name: String): String {
-        val query = "mimeType='$FOLDER_MIME' and name='${name.escapeForQuery()}' and trashed=false"
-        val existing = queryFiles(token, query).firstOrNull()
-        if (existing != null) return existing.id
+    /** Backups this app has stored, newest first. */
+    suspend fun list(token: String, fileName: String? = null): List<DriveFile> {
+        val query = buildList {
+            add("trashed=false")
+            fileName?.let { add("name='${it.escapeForQuery()}'") }
+        }.joinToString(" and ")
 
-        val body = buildJsonObject(
-            "name" to name,
-            "mimeType" to FOLDER_MIME,
-        )
-        val request = Request.Builder()
-            .url("$API/files?fields=id")
-            .authorized(token)
-            .post(body.toRequestBody(JSON_MIME))
-            .build()
-
-        return http.run(request) { response ->
-            json.decodeFromString(DriveFile.serializer(), response.bodyText()).id
-        }
+        return queryFiles(token, query)
     }
-
-    suspend fun list(token: String, folderId: String): List<DriveFile> =
-        queryFiles(token, "'$folderId' in parents and trashed=false")
 
     /**
      * Uploads [source] as [fileName], replacing the previous copy in place.
      *
-     * Replacing rather than adding keeps one canonical backup and keeps the
-     * user's Drive tidy, matching how a phone backup is normally expected to
-     * behave.
+     * Replacing rather than accumulating keeps one canonical backup, which is
+     * how a phone backup is normally expected to behave, and stops the hidden
+     * folder growing without bound where the user cannot prune it.
      */
     suspend fun upload(
         token: String,
-        folderId: String,
         fileName: String,
         source: File,
     ): DriveFile {
-        val existing = queryFiles(
-            token,
-            "'$folderId' in parents and name='${fileName.escapeForQuery()}' and trashed=false",
-        ).firstOrNull()
+        val existing = list(token, fileName).firstOrNull()
 
         val request = if (existing != null) {
             Request.Builder()
@@ -110,7 +93,7 @@ class DriveClient(
                 .patch(source.asRequestBody(ZIP_MIME))
                 .build()
         } else {
-            val metadata = buildJsonObject("name" to fileName, "parents" to listOf(folderId))
+            val metadata = buildJsonObject("name" to fileName, "parents" to listOf(APP_DATA_SPACE))
             val multipart = MultipartBody.Builder()
                 .setType("multipart/related".toMediaType())
                 .addPart(metadata.toRequestBody(JSON_MIME))
@@ -157,7 +140,7 @@ class DriveClient(
     private suspend fun queryFiles(token: String, query: String): List<DriveFile> {
         val url = "$API/files".toHttpUrl().newBuilder()
             .addQueryParameter("q", query)
-            .addQueryParameter("spaces", "drive")
+            .addQueryParameter("spaces", APP_DATA_SPACE)
             .addQueryParameter("fields", "files($FILE_FIELDS)")
             .addQueryParameter("orderBy", "modifiedTime desc")
             .build()
@@ -225,7 +208,9 @@ class DriveClient(
         const val TAG = "DriveClient"
         const val API = "https://www.googleapis.com/drive/v3"
         const val UPLOAD = "https://www.googleapis.com/upload/drive/v3"
-        const val FOLDER_MIME = "application/vnd.google-apps.folder"
+
+        /** Drive's reserved alias for the app's own hidden folder. */
+        const val APP_DATA_SPACE = "appDataFolder"
         const val FILE_FIELDS = "id,name,modifiedTime,size"
         const val MAX_ERROR_CHARS = 500
 

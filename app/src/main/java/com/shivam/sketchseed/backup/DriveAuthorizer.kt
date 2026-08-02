@@ -24,11 +24,14 @@ sealed interface AuthOutcome {
 /**
  * Obtains a Drive access token via Play Services.
  *
- * Deliberately uses only [DRIVE_FILE_SCOPE]. It grants access solely to files
- * this app creates, and Google classes it non-sensitive — which is what keeps
- * the app out of OAuth verification review. Widening it to full `drive` or to
- * `drive.appdata` would drag in an app review, and in the case of full `drive`
- * an annual third-party security assessment.
+ * Uses only [DRIVE_APPDATA_SCOPE], which reaches nothing but this app's own
+ * hidden configuration folder — it cannot see, list or touch anything else in
+ * the user's Drive, and the backups never clutter My Drive. Google classes it
+ * non-sensitive, so no OAuth verification review is needed. Full `drive` would
+ * mean an app review plus an annual third-party security assessment.
+ *
+ * The trade-off is that a hidden folder cannot be inspected or moved by its
+ * owner, which is why the app also offers a plain file export.
  *
  * There is no client ID or secret here on purpose: Android OAuth clients are
  * identified by package name plus signing certificate, checked by Play Services
@@ -39,7 +42,7 @@ class DriveAuthorizer(private val context: Context) {
 
     private val request: AuthorizationRequest by lazy {
         AuthorizationRequest.Builder()
-            .setRequestedScopes(listOf(Scope(DRIVE_FILE_SCOPE)))
+            .setRequestedScopes(listOf(Scope(DRIVE_APPDATA_SCOPE)))
             .build()
     }
 
@@ -93,7 +96,7 @@ class DriveAuthorizer(private val context: Context) {
             Identity.getAuthorizationClient(context)
                 .revokeAccess(
                     com.google.android.gms.auth.api.identity.RevokeAccessRequest.builder()
-                        .setScopes(listOf(Scope(DRIVE_FILE_SCOPE)))
+                        .setScopes(listOf(Scope(DRIVE_APPDATA_SCOPE)))
                         .build(),
                 )
                 .await()
@@ -106,7 +109,7 @@ class DriveAuthorizer(private val context: Context) {
     }
 
     companion object {
-        const val DRIVE_FILE_SCOPE = "https://www.googleapis.com/auth/drive.file"
+        const val DRIVE_APPDATA_SCOPE = "https://www.googleapis.com/auth/drive.appdata"
         private const val TAG = "DriveAuthorizer"
     }
 }

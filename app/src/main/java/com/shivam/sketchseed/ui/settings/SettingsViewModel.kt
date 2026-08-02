@@ -2,6 +2,7 @@ package com.shivam.sketchseed.ui.settings
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -172,9 +173,34 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
     private fun describe(outcome: BackupOutcome): String = when (outcome) {
         is BackupOutcome.BackedUp -> "$BACKED_UP:${outcome.bytes}"
         is BackupOutcome.Restored -> "$RESTORED:${outcome.records}:${outcome.photos}"
+        is BackupOutcome.Exported -> "$EXPORTED:${outcome.bytes}"
         BackupOutcome.NoBackupFound -> NO_BACKUP
         is BackupOutcome.NeedsSignIn -> SIGN_IN_FAILED
         is BackupOutcome.Failed -> outcome.message
+    }
+
+    // ── Plain file export / import ───────────────────────────────────────────
+
+    /**
+     * Writes a copy the user can keep.
+     *
+     * No Drive scope and no account involved — this goes wherever the system
+     * file picker points, including a USB stick or a different cloud entirely.
+     */
+    fun exportToFile(destination: Uri) {
+        viewModelScope.launch {
+            driveBusy.value = true
+            finishWith(describe(container.backupRepository.exportTo(destination)))
+        }
+    }
+
+    fun importFromFile(source: Uri) {
+        viewModelScope.launch {
+            driveBusy.value = true
+            val outcome = container.backupRepository.importFrom(source)
+            usage.value = container.photoStore.usage()
+            finishWith(describe(outcome))
+        }
     }
 
     private fun finishWith(message: String?) {
@@ -221,6 +247,7 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
         /** Sentinels the screen maps onto localised strings. */
         const val BACKED_UP = "backed_up"
         const val RESTORED = "restored"
+        const val EXPORTED = "exported"
         const val NO_BACKUP = "no_backup"
         const val SIGN_IN_FAILED = "sign_in_failed"
         const val SIGN_IN_CANCELLED = "sign_in_cancelled"
