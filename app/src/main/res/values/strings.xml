@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SketchSeed</string>
+
+    <!-- Today -->
+    <string name="day_counter">Day %1$d of %2$d</string>
+    <string name="todays_sketch">Today\'s sketch</string>
+    <string name="find_references">Find references</string>
+    <string name="mark_as_done">Mark as done</string>
+    <string name="progress_fraction">%1$d / %2$d</string>
+    <string name="progress_percent">%1$d%% complete</string>
+
+    <string name="done_today_title">Done for today</string>
+    <string name="done_today_body">Day %1$d unlocks tomorrow. Rest your hand.</string>
+    <string name="add_sketch_photo">Add a photo of your sketch</string>
+    <string name="retake_sketch_photo">Replace photo</string>
+
+    <string name="journey_complete_title">100 days. Complete.</string>
+    <string name="journey_complete_body">You showed up %1$d times. Have a look back at everything you drew.</string>
+    <string name="view_journey">View journey</string>
+
+    <!-- Reference search -->
+    <string name="search_sheet_title">Reference images for “%1$s”</string>
+    <string name="search_pinterest">Pinterest</string>
+    <string name="search_google_images">Google Images</string>
+    <string name="search_query_suffix">%1$s sketch</string>
+    <string name="no_browser_found">No browser available to open search.</string>
+
+    <!-- Difficulty -->
+    <string name="difficulty_easy">Easy</string>
+    <string name="difficulty_medium">Medium</string>
+    <string name="difficulty_hard">Hard</string>
+
+    <!-- On-device AI tip -->
+    <string name="tip_get">Need a nudge?</string>
+    <string name="tip_generating">Thinking…</string>
+    <string name="tip_heading">Tip</string>
+    <string name="tip_unavailable">On-device tips aren\'t available on this device.</string>
+    <string name="tip_failed">Couldn\'t generate a tip. Try again.</string>
+
+    <!-- Journey / calendar -->
+    <string name="journey_title">Journey</string>
+    <string name="journey_locked_day">Day %1$d, not unlocked yet</string>
+    <string name="journey_completed_day">Day %1$d, %2$s, completed</string>
+    <string name="journey_today_day">Day %1$d, today\'s prompt</string>
+    <string name="journey_stat_completed">Completed</string>
+    <string name="journey_stat_streak">Streak</string>
+    <string name="journey_stat_best">Best streak</string>
+
+    <!-- Day detail -->
+    <string name="day_detail_title">Day %1$d</string>
+    <string name="day_detail_completed_on">Completed %1$s</string>
+    <string name="day_detail_no_photo">No photo of this one.</string>
+    <string name="day_detail_locked">This prompt is still sealed. Keep going.</string>
+    <string name="delete_photo">Remove photo</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_open">Open settings</string>
+
+    <string name="settings_backup_header">Google backup</string>
+    <string name="settings_backup_explainer">Your journey, prompts, completion dates and streak are backed up to your Google account by Android and restored automatically when you set up a new phone. No sign-in needed.</string>
+    <string name="settings_backup_images_title">Include sketch photos</string>
+    <string name="settings_backup_images_summary">Photos count against the 25 MB app backup limit. Turn off to keep them on this device only.</string>
+    <plurals name="settings_backup_storage">
+        <item quantity="one">Sketches on device: %1$s across %2$d photo</item>
+        <item quantity="other">Sketches on device: %1$s across %2$d photos</item>
+    </plurals>
+    <string name="settings_backup_state_on">Backed up to Google</string>
+    <string name="settings_backup_state_off">On this device only</string>
+    <string name="settings_backup_quota_warning">Approaching the 25 MB backup limit. Older photos may not be backed up.</string>
+    <string name="settings_backup_open_system">Open Android backup settings</string>
+
+    <string name="settings_ai_header">On-device AI</string>
+    <string name="settings_ai_tips_title">Drawing tips</string>
+    <string name="settings_ai_tips_summary">Generate a short tip for a prompt using Gemini Nano. Runs entirely on your phone; nothing is uploaded.</string>
+    <string name="settings_ai_status_available">Ready</string>
+    <string name="settings_ai_status_downloadable">Model not downloaded yet</string>
+    <string name="settings_ai_status_unavailable">Not supported on this device</string>
+
+    <string name="settings_danger_header">Journey</string>
+    <string name="settings_reset_title">Reset the journey</string>
+    <string name="settings_reset_summary">Clears every completion, the streak, and all sketch photos. This cannot be undone.</string>
+    <string name="settings_reset_confirm_title">Reset everything?</string>
+    <plurals name="settings_reset_confirm_body">
+        <item quantity="one">Your %1$d completed day and its photo will be permanently deleted. You will start again at Day 1.</item>
+        <item quantity="other">All %1$d completed days and their photos will be permanently deleted. You will start again at Day 1.</item>
+    </plurals>
+    <string name="settings_reset_confirm_action">Reset</string>
+    <string name="cancel">Cancel</string>
+
+    <string name="settings_about_header">About</string>
+    <string name="settings_about_version">Version %1$s</string>
+    <string name="settings_about_tagline">One prompt a day, for a hundred days.</string>
+
+    <!-- Generic -->
+    <string name="back">Back</string>
+    <string name="close">Close</string>
+</resources>

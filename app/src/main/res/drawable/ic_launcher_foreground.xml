@@ -1,0 +1,33 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- A sprouting seed drawn by a pencil: the app mark. -->
+
+    <!-- Pencil body, angled from lower-left to upper-right -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M35.5,72.5 L30.5,80.5 L38.5,75.5 L69.0,45.0 L66.0,42.0 Z" />
+    <path
+        android:fillColor="#FFD79A"
+        android:pathData="M66.0,42.0 L69.0,45.0 L72.5,41.5 Q74.0,40.0 72.5,38.5 L69.5,35.5 Q68.0,34.0 66.5,35.5 Z" />
+
+    <!-- Seed / sprout -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54.0,74.0 m-6.5,0 a6.5,8 0 1,0 13,0 a6.5,8 0 1,0 -13,0" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54.0,66.0 L54.0,54.0"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54.0,58.0 Q44.0,56.0 43.0,46.0 Q53.0,47.0 54.0,58.0 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54.0,54.0 Q64.0,52.0 65.0,42.0 Q55.0,43.0 54.0,54.0 Z" />
+</vector>

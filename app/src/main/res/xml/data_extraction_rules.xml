@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12 (API 31) and above.
+
+  Backed up to the user's own Google Drive by Android Auto Backup. No account
+  setup, no Drive API, no credentials: the platform does it against whichever
+  Google account already backs up the device.
+
+    files/datastore/  -> journey progress, which prompt was drawn on which day,
+                         completion dates, and streak history
+    files/sketches/   -> scanned sketch images the user opted to back up
+
+  Sketches the user has excluded live in the app's no_backup/ directory, which
+  the platform never includes in a backup by definition. That directory is the
+  "off" position of the Settings toggle, so no rule is needed for it here.
+
+  Auto Backup allows 25 MB per app, so sketches are downscaled and re-encoded
+  before they are written. See PhotoStore.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="file" path="datastore/" />
+        <include domain="file" path="sketches/" />
+    </cloud-backup>
+
+    <device-transfer>
+        <include domain="file" path="datastore/" />
+        <include domain="file" path="sketches/" />
+    </device-transfer>
+</data-extraction-rules>

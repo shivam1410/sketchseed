@@ -1,0 +1,21 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Local config — machine specific, never committed
+local.properties
+
+# IDE
+*.iml
+.idea/
+/captures/
+.externalNativeBuild/
+.cxx/
+
+# Signing
+*.keystore
+*.jks
+
+# macOS
+.DS_Store
