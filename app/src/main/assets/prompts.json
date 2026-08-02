@@ -1,7 +1,7 @@
 {
   "packId": "core-100",
   "title": "The First Hundred",
-  "_comment": "startDate anchors the pack to the calendar. Every install computes today's day number from this date, so everyone on this build sees the same prompt on the same day without a server. Changing it reshuffles which prompt lands on which date for everybody.",
+  "_comment": "startDate is only a fallback. Day 1 is normally the day an install first runs, recorded in settings, so whoever starts and whenever they start begins at day 1. This date stands in only until that has happened. An earlier version used it as a shared anchor so every install matched by date; see Settings.startDate.",
   "_sequence": "Ordered by skill, not by subject: line and shape (1-14), proportion (15-26), form and ellipses (27-40), perspective (41-54), value (55-66), texture (67-76), organic and gesture (77-87), faces (88-96), composition (97-100).",
   "startDate": "2026-08-02",
   "prompts": [

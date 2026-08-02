@@ -243,6 +243,7 @@ are rated on their own merits — `Bicycle Wheel` at day 49 is HARD while sittin
 the perspective run, because a wheel is an ellipse problem most beginners lose an hour
 to. Faces get ten days of runway before the finale instead of arriving cold.
 
-They live in `app/src/main/assets/prompts.json`, alongside the `startDate` that anchors
-day 1 to the calendar. Editing the prompts will not rewrite your history: each
-finished day snapshots the prompt text it was drawn from.
+They live in `app/src/main/assets/prompts.json`, alongside a `startDate` that only
+applies before first launch records your own — see
+[Starting, and sharing](#starting-and-sharing). Editing the prompts will not rewrite
+your history: each finished day snapshots the prompt text it was drawn from.
