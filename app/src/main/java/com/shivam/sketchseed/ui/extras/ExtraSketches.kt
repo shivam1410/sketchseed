@@ -1,7 +1,5 @@
-package com.shivam.sketchseed.ui.daydetail
+package com.shivam.sketchseed.ui.extras
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,7 +12,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.ImageNotSupported
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -74,13 +71,15 @@ fun ExtraSketchesSection(
         Spacer(Modifier.height(12.dp))
 
         extras.forEach { extra ->
-            ExtraRow(
+            Spacer(Modifier.height(20.dp))
+            ExtraItem(
                 extra = extra,
                 photo = extra.photoFileName?.let(resolvePhoto),
                 onRemove = { onRemove(extra.id) },
             )
-            Spacer(Modifier.height(10.dp))
         }
+
+        Spacer(Modifier.height(24.dp))
 
         OutlinedButton(onClick = onAdd, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -90,60 +89,53 @@ fun ExtraSketchesSection(
     }
 }
 
+/**
+ * One bonus sketch, shown at the same size as the day's own.
+ *
+ * An extra is a drawing, not a list entry — it gets the full width and the same
+ * corner radius and scaling as the main photo, so a day with four sketches reads
+ * as four sketches rather than one drawing and three attachments.
+ */
 @Composable
-private fun ExtraRow(
+private fun ExtraItem(
     extra: ExtraSketch,
     photo: File?,
     onRemove: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainerLow),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (photo != null) {
-                AsyncImage(
-                    model = photo,
-                    contentDescription = extra.title.ifBlank { null },
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.size(56.dp),
-                )
-            } else {
+    Column(Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = extra.title.ifBlank { stringResource(R.string.extras_untitled) },
+                style = MaterialTheme.typography.titleMedium,
+                color = if (extra.title.isBlank()) {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+
+            IconButton(onClick = onRemove) {
                 Icon(
-                    Icons.Outlined.ImageNotSupported,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                    modifier = Modifier.size(18.dp),
+                    Icons.Outlined.Delete,
+                    contentDescription = stringResource(R.string.extras_remove),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
 
-        Spacer(Modifier.width(14.dp))
-
-        Text(
-            text = extra.title.ifBlank { stringResource(R.string.extras_untitled) },
-            style = MaterialTheme.typography.bodyLarge,
-            color = if (extra.title.isBlank()) {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            } else {
-                MaterialTheme.colorScheme.onSurface
-            },
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
-
-        IconButton(onClick = onRemove) {
-            Icon(
-                Icons.Outlined.Delete,
-                contentDescription = stringResource(R.string.extras_remove),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        if (photo != null) {
+            Spacer(Modifier.height(8.dp))
+            AsyncImage(
+                model = photo,
+                contentDescription = extra.title.ifBlank { null },
+                // Matches the day's own photo exactly.
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp)),
             )
         }
     }

@@ -107,9 +107,18 @@ fun rememberSketchCapture(
     }
 }
 
-/** A fresh file in cache the camera app is allowed to write to. */
+/**
+ * A fresh file in cache the camera app is allowed to write to.
+ *
+ * Earlier captures are swept first. PhotoStore re-encodes into its own storage,
+ * so once a shot has been handled the original here is dead weight — and at
+ * 1.5 MB a Pixel photo, leaving them to accumulate quietly eats real space.
+ * Nothing else can be mid-capture at this point, since this runs as a new one
+ * is being started.
+ */
 private fun Context.newCameraTargetUri(): Uri? = try {
     val dir = File(cacheDir, "capture").apply { mkdirs() }
+    dir.listFiles()?.forEach { it.delete() }
     val file = File.createTempFile("sketch-", ".jpg", dir)
     FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
 } catch (e: IOException) {

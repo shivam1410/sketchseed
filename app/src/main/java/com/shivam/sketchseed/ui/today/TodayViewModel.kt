@@ -17,6 +17,7 @@ import com.shivam.sketchseed.domain.model.DayRecord
 import com.shivam.sketchseed.domain.model.JourneyProgress
 import com.shivam.sketchseed.domain.model.Prompt
 import com.shivam.sketchseed.domain.model.PromptPack
+import com.shivam.sketchseed.ui.extras.ExtraSketchEditor
 import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -88,6 +89,20 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
     private val tip = MutableStateFlow<TipState>(TipState.Idle)
     private val savingPhoto = MutableStateFlow(false)
     private val errorMessage = MutableStateFlow<Int?>(null)
+
+    /**
+     * Bonus sketches for the day just finished.
+     *
+     * The day is read live rather than captured, so an app left open past
+     * midnight attaches extras to the right day.
+     */
+    val extras = ExtraSketchEditor(
+        container = container,
+        scope = viewModelScope,
+        day = { (uiState.value.mode as? TodayMode.Rest)?.finished?.day },
+        today = { today.value },
+        onError = { errorMessage.value = it },
+    )
 
     init {
         viewModelScope.launch {

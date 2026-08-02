@@ -97,7 +97,7 @@
     <string name="extras_save">Save</string>
     <string name="extras_remove">Remove this sketch</string>
     <string name="extras_untitled">Untitled</string>
-    <string name="extras_badge">%1$d more</string>
+    <string name="extras_badge">+%1$d</string>
     <string name="done_today_extras">Drawn something else today?</string>
 
     <!-- Settings -->

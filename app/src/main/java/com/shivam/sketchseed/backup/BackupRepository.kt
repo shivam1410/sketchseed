@@ -219,12 +219,6 @@ class BackupRepository(
     }
 
     /**
-     * Replaces the journey with [contents].
-     *
-     * Shared by Drive restore and file import so the two can never drift apart
-     * in how they treat photos or dangling references.
-     */
-    /**
      * Every sketch file a day owns.
      *
      * Extras carry their own photos, so gathering only [DayRecord.photoFileName]
@@ -233,6 +227,12 @@ class BackupRepository(
     private fun photoNamesOf(record: DayRecord): List<String> =
         listOfNotNull(record.photoFileName) + record.extras.mapNotNull { it.photoFileName }
 
+    /**
+     * Replaces the journey with [contents].
+     *
+     * Shared by Drive restore and file import so the two can never drift apart
+     * in how they treat photos or dangling references.
+     */
     private suspend fun applyRestore(contents: BackupContents): BackupOutcome {
         // Adopt before deleting anything. If this is interrupted the user is
         // left with both copies rather than neither, which is the only failure

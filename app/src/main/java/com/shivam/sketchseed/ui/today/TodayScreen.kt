@@ -68,6 +68,8 @@ import com.shivam.sketchseed.domain.model.DayRecord
 import com.shivam.sketchseed.domain.model.JourneyProgress
 import com.shivam.sketchseed.domain.model.Prompt
 import com.shivam.sketchseed.ui.components.DifficultyChip
+import com.shivam.sketchseed.ui.extras.ExtraComposer
+import com.shivam.sketchseed.ui.extras.ExtraSketchesSection
 import com.shivam.sketchseed.ui.capture.rememberSketchCaptureSheet
 import com.shivam.sketchseed.ui.search.ReferenceSearch
 import com.shivam.sketchseed.ui.theme.OverlineStyle
@@ -111,6 +113,12 @@ fun TodayScreen(
     val captureFailedMessage = stringResource(R.string.capture_failed)
     val addPhoto = rememberSketchCaptureSheet(
         onCaptured = viewModel::onSketchCaptured,
+        onFailed = { scope.launch { snackbarHostState.showSnackbar(captureFailedMessage) } },
+    )
+
+    val extraDraft by viewModel.extras.draft.collectAsStateWithLifecycle()
+    val addExtraPhoto = rememberSketchCaptureSheet(
+        onCaptured = viewModel.extras::onPhotoCaptured,
         onFailed = { scope.launch { snackbarHostState.showSnackbar(captureFailedMessage) } },
     )
 
@@ -172,8 +180,15 @@ fun TodayScreen(
                     nextDay = mode.nextDay,
                     savingPhoto = state.savingPhoto,
                     photo = mode.finished.photoFileName?.let(resolvePhoto),
+                    resolvePhoto = resolvePhoto,
                     onAddPhoto = addPhoto,
                     onOpenDay = { onOpenDay(mode.finished.day) },
+                    onAddExtra = viewModel.extras::start,
+                    onRemoveExtra = { id ->
+                        mode.finished.extras
+                            .firstOrNull { it.id == id }
+                            ?.let(viewModel.extras::remove)
+                    },
                 )
 
                 is TodayMode.WindowClosed -> MessageBlock(
@@ -194,6 +209,17 @@ fun TodayScreen(
 
             Spacer(Modifier.height(40.dp))
         }
+    }
+
+    extraDraft?.let { open ->
+        ExtraComposer(
+            draft = open,
+            photo = open.photoFileName?.let(resolvePhoto),
+            onTitleChange = viewModel.extras::setTitle,
+            onAddPhoto = addExtraPhoto,
+            onSave = viewModel.extras::save,
+            onCancel = viewModel.extras::cancel,
+        )
     }
 
     searchFor?.let { promptText ->
@@ -459,8 +485,11 @@ private fun RestBlock(
     nextDay: Int?,
     savingPhoto: Boolean,
     photo: File?,
+    resolvePhoto: (String) -> File?,
     onAddPhoto: () -> Unit,
     onOpenDay: () -> Unit,
+    onAddExtra: () -> Unit,
+    onRemoveExtra: (String) -> Unit,
 ) {
     Spacer(Modifier.height(48.dp))
 
@@ -520,23 +549,16 @@ private fun RestBlock(
         onClick = onAddPhoto,
     )
 
-    Spacer(Modifier.height(20.dp))
+    Spacer(Modifier.height(28.dp))
 
     // Somewhere for spare appetite to go on a day that took two minutes,
     // without letting it eat into tomorrow's prompt.
-    TextButton(onClick = onOpenDay) {
-        Text(
-            text = if (finished.extras.isEmpty()) {
-                stringResource(R.string.done_today_extras)
-            } else {
-                pluralStringResource(
-                    R.plurals.extras_count,
-                    finished.extras.size,
-                    finished.extras.size,
-                )
-            },
-        )
-    }
+    ExtraSketchesSection(
+        extras = finished.extras,
+        resolvePhoto = resolvePhoto,
+        onAdd = onAddExtra,
+        onRemove = onRemoveExtra,
+    )
 }
 
 @Composable

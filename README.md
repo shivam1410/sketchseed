@@ -42,12 +42,14 @@ shared. Change `startDate` and you fork the schedule for everyone on that build.
 
 ## What's in it
 
-- **Today** — day counter, the prompt, difficulty, a reference search, mark-as-done,
-  streak and progress.
-- **Journey** — all 100 days as a grid of thumbnails. Tap any finished day to revisit
-  the prompt and the sketch.
-- **Day detail** — the full sketch, when you drew it, and the tip if you asked for one.
-- **Settings** — backup, on-device AI, and reset.
+- **Today** — the day counter, the prompt, its difficulty, a reference search and
+  mark-as-done. Nothing else: no streak, no progress bar, no numbers. Those live one
+  tap away, because the point of this screen is that you look at it and start drawing.
+- **Journey** — all 100 days as a grid of thumbnails, with every number: completed,
+  current streak, best streak, and the progress bar. Tap any finished day to revisit it.
+- **Day detail** — the full sketch, when you drew it, the tip if you asked for one, and
+  anything extra you drew that day.
+- **Settings** — Drive backup, export and import, on-device AI, and reset.
 
 ## Reference search
 
@@ -89,24 +91,47 @@ difficulty ramp, which is the one thing a 100-day journey actually needs.
 
 ## Backup
 
-Android Auto Backup, with **no account, no sign-in and no Drive API**. The platform
-backs the app's data up to whichever Google account already backs up the device, and
-restores it when you set up a new phone.
+A zip of the journey and every sketch, kept in a hidden folder in your own Google
+Drive, uploaded shortly after you finish a day.
 
-Backed up:
+Android Auto Backup is deliberately **off** (`allowBackup="false"`). It looked like the
+cheaper option — no account, no code — but it caps at 25 MB and silently drops
+everything past it, it resets whenever the signing key changes, and the user can
+neither trigger it nor see whether it worked.
 
-- journey progress and which prompt was drawn on which day
-- completion dates and streak history
-- sketch photos (optional — see below)
+Backed up: journey progress, which prompt was drawn on which day, completion dates,
+streak history, and every sketch photo — including the extras.
 
-Auto Backup allows 25 MB per app, which a hundred full-resolution photos would blow
-straight past. Two things keep it under:
+Two things make it recoverable rather than merely present:
 
-1. Sketches are downscaled to 1600 px on the long edge and re-encoded as JPEG.
-2. Settings has an **Include sketch photos** toggle. Because Auto Backup rules are
-   static XML and cannot be flipped at runtime, the toggle physically moves the files
-   between `filesDir/sketches` (backed up) and `noBackupFilesDir/sketches` (never
-   backed up). Settings shows current usage and warns as you approach the limit.
+1. **One generation is kept.** A new backup renames the current one to
+   `sketchseed-backup-previous.zip` before uploading. A backup that only ever holds
+   the newest state is only as trustworthy as the state that produced it — anything
+   that empties the journey locally would, one automatic run later, empty the backup.
+2. **Restore replaces, and adopts before it deletes.** Merging two journeys would
+   produce a state neither the user nor the streak maths could explain, so restore
+   overwrites wholesale behind a confirmation. New sketches are copied into place
+   before any old ones are removed, so an interruption leaves you with both copies
+   rather than neither.
+
+The Drive copy is hidden in `appDataFolder`, which means you cannot open or move it
+yourself. **Export a copy** in Settings writes the identical zip to ordinary storage —
+no account, no Drive scope, restorable into any build.
+
+> **Signing and Drive are linked.** Authorization is granted to an OAuth client bound
+> to the applicationId *and* the signing certificate. Re-sign the app with a different
+> key and every Drive call fails until that certificate's SHA-1 is registered in the
+> Google Cloud project. This is why the release build is signed with the debug
+> certificate — see [Building](#building).
+
+## Extra sketches
+
+Some prompts take a minute. A finished day can hold any number of **extra sketches**,
+each with a title and an optional photo, from either the home screen or day detail.
+
+They are deliberately inert: extras never count toward the hundred, never move the
+streak, and never unlock the next day. Otherwise a fast prompt becomes a way to buy
+progress, and one-a-day stops meaning anything. Unit tests pin that down.
 
 ## Tech
 
@@ -157,16 +182,26 @@ These need a connected device or emulator:
 
 Or open the project in Android Studio and run it.
 
+### A shareable APK
+
+```bash
+./gradlew assembleRelease
+```
+
+Produces a minified ~2.9 MB APK at `app/build/outputs/apk/release/app-release.apk`,
+installable by anyone who sideloads it.
+
+It is signed with the **debug** certificate on purpose. Drive authorization is bound to
+the applicationId plus a signing certificate, and the debug one is what is registered;
+signing with a fresh release key authorises fine and then fails every Drive call. To
+move to a real release key, generate a keystore, register its SHA-1 in the Google Cloud
+project alongside the existing one, then point `signingConfigs` at it. Play will not
+accept a debug-signed APK, so that step is required before publishing.
+
 ## The prompts
 
-100 days ramping from `Apple` to `Self Portrait`. Each day is a short subject plus a
-one-line **focus**:
-
-> **Bicycle Wheel** · *Just the front wheel and forks. Get the ellipse right.*
-
-The subject stays short because it doubles as the image-search term. The focus is the
-teaching half, and on hard days it deliberately *shrinks* the task — scope creep is
-what makes people quit around day 60.
+100 days ramping from `Apple` to `Self Portrait`. Each day is a short subject — short
+because it doubles as the image-search term.
 
 The sequence is ordered by **skill, not by subject**, which is the order the teaching
 material converges on: line and shape, then proportion, then perspective, then value.

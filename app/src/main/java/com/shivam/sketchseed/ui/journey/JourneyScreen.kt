@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -261,15 +262,16 @@ private fun DayTile(
 /** Marks a day that carries bonus sketches beyond its own prompt. */
 @Composable
 private fun ExtrasBadge(count: Int, modifier: Modifier = Modifier) {
+    val spoken = pluralStringResource(R.plurals.extras_count, count, count)
     Text(
-        text = "+$count",
+        text = stringResource(R.string.extras_badge, count),
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onPrimary,
         modifier = modifier
             .clip(RoundedCornerShape(percent = 50))
             .background(MaterialTheme.colorScheme.primary)
             .padding(horizontal = 6.dp, vertical = 2.dp)
-            .semantics { contentDescription = "$count extra sketches" },
+            .semantics { contentDescription = spoken },
     )
 }
 

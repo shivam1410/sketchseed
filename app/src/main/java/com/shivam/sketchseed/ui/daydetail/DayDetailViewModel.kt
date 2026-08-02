@@ -13,19 +13,16 @@ import com.shivam.sketchseed.AppContainer
 import com.shivam.sketchseed.R
 import com.shivam.sketchseed.SketchSeedApplication
 import com.shivam.sketchseed.domain.model.DayRecord
-import com.shivam.sketchseed.domain.model.ExtraSketch
 import com.shivam.sketchseed.domain.model.JourneyProgress
 import com.shivam.sketchseed.domain.model.Prompt
 import com.shivam.sketchseed.domain.model.PromptPack
-import java.util.UUID
+import com.shivam.sketchseed.ui.extras.ExtraSketchEditor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class DayDetailUiState(
@@ -47,16 +44,6 @@ data class DayDetailUiState(
     val isBackfill: Boolean get() = canComplete && !isToday
 }
 
-/** The "another sketch" composer, while it is open. */
-data class ExtraDraft(
-    val title: String = "",
-    val photoFileName: String? = null,
-    val saving: Boolean = false,
-) {
-    /** A nameless, pictureless extra would just be a blank row. */
-    val canSave: Boolean get() = !saving && (title.isNotBlank() || photoFileName != null)
-}
-
 private data class Transient(
     val savingPhoto: Boolean,
     @param:StringRes val errorMessage: Int?,
@@ -72,9 +59,14 @@ class DayDetailViewModel(
     private val savingPhoto = MutableStateFlow(false)
     private val errorMessage = MutableStateFlow<Int?>(null)
 
-    /** Non-null while the "another sketch" composer is open. */
-    private val draftExtra = MutableStateFlow<ExtraDraft?>(null)
-    val extraDraft: StateFlow<ExtraDraft?> = draftExtra.asStateFlow()
+    /** Bonus sketches for this day. Shared with Today, which offers the same. */
+    val extras = ExtraSketchEditor(
+        container = container,
+        scope = viewModelScope,
+        day = { day },
+        today = { today.value },
+        onError = { errorMessage.value = it },
+    )
 
     init {
         viewModelScope.launch {
@@ -93,9 +85,9 @@ class DayDetailViewModel(
         pack,
         today,
         transient,
-    ) { records, loadedPack, now, extras ->
+    ) { records, loadedPack, now, flags ->
         if (loadedPack == null) {
-            return@combine DayDetailUiState(day = day, savingPhoto = extras.savingPhoto)
+            return@combine DayDetailUiState(day = day, savingPhoto = flags.savingPhoto)
         }
 
         val progress = JourneyProgress.from(
@@ -113,8 +105,8 @@ class DayDetailViewModel(
             prompt = loadedPack.promptFor(day).takeIf { progress.isRevealed(day) },
             canComplete = progress.canComplete(day),
             isToday = progress.currentDay == day,
-            savingPhoto = extras.savingPhoto,
-            errorMessage = extras.errorMessage,
+            savingPhoto = flags.savingPhoto,
+            errorMessage = flags.errorMessage,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -171,74 +163,6 @@ class DayDetailViewModel(
             } finally {
                 savingPhoto.value = false
             }
-        }
-    }
-
-    // ── Extra sketches ───────────────────────────────────────────────────────
-
-    /** Opens the "another sketch" composer. */
-    fun startExtra() {
-        draftExtra.value = ExtraDraft()
-    }
-
-    fun cancelExtra() {
-        // Drop any photo already taken for the abandoned draft, so a cancelled
-        // composer cannot leave an orphan file behind.
-        val orphan = draftExtra.value?.photoFileName
-        draftExtra.value = null
-        if (orphan != null) {
-            viewModelScope.launch { container.photoStore.delete(orphan) }
-        }
-    }
-
-    fun setExtraTitle(title: String) {
-        draftExtra.update { it?.copy(title = title) }
-    }
-
-    /** Stores the photo straight away so the composer can show a thumbnail. */
-    fun onExtraPhotoCaptured(uri: Uri) {
-        viewModelScope.launch {
-            draftExtra.update { it?.copy(saving = true) }
-            val previous = draftExtra.value?.photoFileName
-            val fileName = container.photoStore.save(uri, day)
-
-            if (fileName == null) {
-                errorMessage.value = R.string.photo_save_failed
-                draftExtra.update { it?.copy(saving = false) }
-                return@launch
-            }
-
-            // Replacing the photo mid-draft must not strand the old one.
-            if (previous != null) container.photoStore.delete(previous)
-            draftExtra.update { it?.copy(photoFileName = fileName, saving = false) }
-        }
-    }
-
-    fun saveExtra() {
-        val draft = draftExtra.value ?: return
-        if (!draft.canSave) return
-
-        viewModelScope.launch {
-            container.journeyRepository.addExtra(
-                day = day,
-                extra = ExtraSketch(
-                    id = UUID.randomUUID().toString(),
-                    title = draft.title.trim(),
-                    photoFileName = draft.photoFileName,
-                    createdOnEpochDay = today.value.toEpochDay(),
-                ),
-            )
-            draftExtra.value = null
-        }
-    }
-
-    fun removeExtra(extraId: String) {
-        viewModelScope.launch {
-            uiState.value.record?.extras
-                ?.firstOrNull { it.id == extraId }
-                ?.photoFileName
-                ?.let { container.photoStore.delete(it) }
-            container.journeyRepository.removeExtra(day, extraId)
         }
     }
 

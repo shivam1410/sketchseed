@@ -22,6 +22,17 @@ android {
 
     buildTypes {
         release {
+            // Signed with the debug certificate on purpose, not by oversight.
+            //
+            // Drive authorization is granted to an OAuth client bound to this
+            // applicationId *and* a signing certificate. The registered one is
+            // the debug cert, so an APK signed with anything else authorises
+            // fine and then fails every Drive call. Re-signing means first
+            // registering the new SHA-1 in the Google Cloud project.
+            //
+            // Good enough to hand someone an APK; Play will not accept it.
+            signingConfig = signingConfigs.getByName("debug")
+
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

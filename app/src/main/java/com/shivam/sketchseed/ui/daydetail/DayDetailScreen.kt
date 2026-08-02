@@ -66,6 +66,8 @@ import com.shivam.sketchseed.R
 import com.shivam.sketchseed.domain.model.DayRecord
 import com.shivam.sketchseed.domain.model.Difficulty
 import com.shivam.sketchseed.ui.components.DifficultyChip
+import com.shivam.sketchseed.ui.extras.ExtraComposer
+import com.shivam.sketchseed.ui.extras.ExtraSketchesSection
 import com.shivam.sketchseed.ui.capture.rememberSketchCaptureSheet
 import com.shivam.sketchseed.ui.search.ReferenceSearch
 import com.shivam.sketchseed.ui.theme.OverlineStyle
@@ -97,9 +99,9 @@ fun DayDetailScreen(
         onFailed = { scope.launch { snackbarHostState.showSnackbar(captureFailedMessage) } },
     )
 
-    val draft by viewModel.extraDraft.collectAsStateWithLifecycle()
+    val draft by viewModel.extras.draft.collectAsStateWithLifecycle()
     val addExtraPhoto = rememberSketchCaptureSheet(
-        onCaptured = viewModel::onExtraPhotoCaptured,
+        onCaptured = viewModel.extras::onPhotoCaptured,
         onFailed = { scope.launch { snackbarHostState.showSnackbar(captureFailedMessage) } },
     )
 
@@ -165,8 +167,8 @@ fun DayDetailScreen(
                     ExtraSketchesSection(
                         extras = record.extras,
                         resolvePhoto = resolvePhoto,
-                        onAdd = viewModel::startExtra,
-                        onRemove = viewModel::removeExtra,
+                        onAdd = viewModel.extras::start,
+                        onRemove = { id -> record.extras.firstOrNull { e -> e.id == id }?.let(viewModel.extras::remove) },
                     )
                 }
 
@@ -189,10 +191,10 @@ fun DayDetailScreen(
         ExtraComposer(
             draft = open,
             photo = open.photoFileName?.let(resolvePhoto),
-            onTitleChange = viewModel::setExtraTitle,
+            onTitleChange = viewModel.extras::setTitle,
             onAddPhoto = addExtraPhoto,
-            onSave = viewModel::saveExtra,
-            onCancel = viewModel::cancelExtra,
+            onSave = viewModel.extras::save,
+            onCancel = viewModel.extras::cancel,
         )
     }
 
