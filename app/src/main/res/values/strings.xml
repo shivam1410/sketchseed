@@ -95,9 +95,9 @@
     </plurals>
 
     <string name="settings_drive_header">Google Drive backup</string>
-    <string name="settings_drive_explainer">Keeps your journey and every sketch in your own Google Drive, in a hidden folder only this app can read. This is the only backup — Android\'s built-in one is switched off, because its 25 MB limit drops data silently and it resets whenever the app is re-signed. Manage or delete it from Drive under Settings, Manage apps.</string>
+    <string name="settings_drive_explainer">Your journey and every sketch, kept in a hidden folder in your own Google Drive. Manage it from Drive under Settings, Manage apps.</string>
     <string name="settings_drive_auto_title">Back up automatically</string>
-    <string name="settings_drive_auto_summary">Uploads on its own a couple of minutes after you finish a day, and once daily as a safety net. Needs a connection; never interrupts you to sign in.</string>
+    <string name="settings_drive_auto_summary">Uploads shortly after you finish a day. Never interrupts you to sign in.</string>
     <string name="settings_drive_backup_now">Back up to Drive now</string>
     <string name="settings_drive_restore">Restore from Drive</string>
     <string name="settings_drive_never">Not backed up to Drive yet</string>
@@ -112,7 +112,7 @@
     <string name="settings_drive_signin_cancelled">Google sign-in was cancelled.</string>
 
     <string name="settings_file_header">Keep your own copy</string>
-    <string name="settings_file_explainer">The Drive copy is hidden, so you can\'t open or move it yourself. Export writes the same backup as an ordinary zip wherever you choose — Downloads, a USB stick, another cloud — and it restores into any build of the app. No account needed.</string>
+    <string name="settings_file_explainer">The Drive copy is hidden. Export the same backup as a plain zip you can keep anywhere, and restore it into any build.</string>
     <string name="settings_file_export">Export a copy…</string>
     <string name="settings_file_import">Restore from a file…</string>
     <string name="settings_file_default_name">sketchseed-backup.zip</string>
