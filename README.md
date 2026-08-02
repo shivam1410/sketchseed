@@ -55,15 +55,23 @@ Each prompt searches for `"<prompt> sketch"` rather than the bare noun, which re
 line drawings you can actually follow instead of photographs. Pinterest or Google
 Images, your pick.
 
+## Capturing a sketch
+
+Camera or gallery, chosen per sketch. Photography is delegated to whatever camera app
+you already have via `ACTION_IMAGE_CAPTURE`, and the gallery route uses the system
+photo picker.
+
+Neither needs a permission — and the camera one specifically **because the app
+declares no `CAMERA` permission**. The platform only starts requiring it for this
+intent once an app declares it, so not declaring it is what keeps the flow
+permission-free. The camera writes into a cache directory exposed through a
+`FileProvider`; `PhotoStore` then downscales it into place and the temp file is
+disposable.
+
+An earlier version used the ML Kit document scanner for its auto-crop and de-skew.
+That is gone: it framed sketching as document scanning, and it needed Play Services.
+
 ## On-device AI
-
-Two ML Kit features, both running entirely on the phone. Nothing is uploaded.
-
-**Document Scanner** (`play-services-mlkit-document-scanner`) handles sketch capture.
-It finds the edges of the paper, corrects the perspective and flattens the shadow your
-hand casts over the page, so a photo taken at an angle on a desk comes back looking
-like a flatbed scan. Capture happens inside Play Services' own activity, so the app
-never requests the `CAMERA` permission.
 
 **Gemini Nano** (`genai-prompt`, ML Kit Prompt API) generates an optional one-line
 drawing tip. This is a garnish, never a dependency: the API is beta, Gemini Nano is
@@ -151,11 +159,34 @@ Or open the project in Android Studio and run it.
 
 ## The prompts
 
-100 prompts, 1–3 words each, ramping from `Apple` to `Self Portrait`:
+100 days ramping from `Apple` to `Self Portrait`. Each day is a short subject plus a
+one-line **focus**:
 
-- Days 1–30 — single objects with simple silhouettes
-- Days 31–70 — structure, perspective, texture, animals
-- Days 71–100 — scenes, interiors, faces
+> **Bicycle Wheel** · *Just the front wheel and forks. Get the ellipse right.*
+
+The subject stays short because it doubles as the image-search term. The focus is the
+teaching half, and on hard days it deliberately *shrinks* the task — scope creep is
+what makes people quit around day 60.
+
+The sequence is ordered by **skill, not by subject**, which is the order the teaching
+material converges on: line and shape, then proportion, then perspective, then value.
+
+| Days | Practising |
+|---|---|
+| 1–14 | Line and shape confidence |
+| 15–26 | Proportion and measuring |
+| 27–40 | Form and ellipses |
+| 41–54 | Perspective |
+| 55–66 | Value and shading |
+| 67–76 | Texture |
+| 77–87 | Organic form and gesture |
+| 88–96 | Faces |
+| 97–100 | Composition |
+
+Difficulty climbs continuously rather than in three flat blocks, and individual days
+are rated on their own merits — `Bicycle Wheel` at day 49 is HARD while sitting inside
+the perspective run, because a wheel is an ellipse problem most beginners lose an hour
+to. Faces get ten days of runway before the finale instead of arriving cold.
 
 They live in `app/src/main/assets/prompts.json`, alongside the `startDate` that anchors
 day 1 to the calendar. Editing the prompts will not rewrite your history: each

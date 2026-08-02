@@ -66,13 +66,13 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.coil.compose)
-
-    implementation(libs.mlkit.document.scanner)
+    implementation(libs.androidx.exifinterface)
     implementation(libs.mlkit.genai.prompt)
 
     implementation(libs.play.services.auth)
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.okhttp)
+    implementation(libs.androidx.work.runtime)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 

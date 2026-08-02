@@ -14,10 +14,11 @@ import kotlinx.coroutines.flow.map
 
 /** User-facing toggles. */
 data class Settings(
-    val backupSketches: Boolean = true,
     val aiTipsEnabled: Boolean = true,
     /** When the last successful Drive backup finished, or null if never. */
     val lastDriveBackupEpochSecond: Long? = null,
+    /** Whether to back up to Drive on its own after each finished day. */
+    val autoDriveBackup: Boolean = true,
 )
 
 class SettingsRepository(
@@ -34,14 +35,14 @@ class SettingsRepository(
         }
         .map { prefs ->
             Settings(
-                backupSketches = prefs[KEY_BACKUP_SKETCHES] ?: true,
                 aiTipsEnabled = prefs[KEY_AI_TIPS] ?: true,
                 lastDriveBackupEpochSecond = prefs[KEY_LAST_DRIVE_BACKUP],
+                autoDriveBackup = prefs[KEY_AUTO_DRIVE_BACKUP] ?: true,
             )
         }
 
-    suspend fun setBackupSketches(enabled: Boolean) {
-        dataStore.edit { it[KEY_BACKUP_SKETCHES] = enabled }
+    suspend fun setAutoDriveBackup(enabled: Boolean) {
+        dataStore.edit { it[KEY_AUTO_DRIVE_BACKUP] = enabled }
     }
 
     suspend fun setAiTipsEnabled(enabled: Boolean) {
@@ -54,8 +55,8 @@ class SettingsRepository(
 
     private companion object {
         const val TAG = "SettingsRepository"
-        val KEY_BACKUP_SKETCHES = booleanPreferencesKey("backup_sketches")
         val KEY_AI_TIPS = booleanPreferencesKey("ai_tips_enabled")
         val KEY_LAST_DRIVE_BACKUP = longPreferencesKey("last_drive_backup")
+        val KEY_AUTO_DRIVE_BACKUP = booleanPreferencesKey("auto_drive_backup")
     }
 }

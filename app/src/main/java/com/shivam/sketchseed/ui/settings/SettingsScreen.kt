@@ -1,12 +1,8 @@
 package com.shivam.sketchseed.ui.settings
 
 import android.app.Activity
-import android.content.ActivityNotFoundException
-import android.content.Intent
-import android.provider.Settings as AndroidSettings
 import android.text.format.DateUtils
 import android.text.format.Formatter
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts.CreateDocument
@@ -24,7 +20,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -60,7 +55,6 @@ import com.shivam.sketchseed.R
 import com.shivam.sketchseed.ai.TipAvailability
 import com.shivam.sketchseed.ui.components.SectionHeader
 
-private const val TAG = "SettingsScreen"
 private const val ZIP_MIME = "application/zip"
 
 /** Some file pickers hide zips behind a generic type, so offer both. */
@@ -193,11 +187,11 @@ fun SettingsScreen(
         ) {
             Spacer(Modifier.height(8.dp))
 
-            // ── Google backup ────────────────────────────────────────────────
-            SectionHeader(stringResource(R.string.settings_backup_header))
+            // ── Google Drive ─────────────────────────────────────────────────
+            SectionHeader(stringResource(R.string.settings_drive_header))
 
             Text(
-                text = stringResource(R.string.settings_backup_explainer),
+                text = stringResource(R.string.settings_drive_explainer),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -206,16 +200,16 @@ fun SettingsScreen(
 
             ListItem(
                 headlineContent = {
-                    Text(stringResource(R.string.settings_backup_images_title))
+                    Text(stringResource(R.string.settings_drive_auto_title))
                 },
                 supportingContent = {
-                    Text(stringResource(R.string.settings_backup_images_summary))
+                    Text(stringResource(R.string.settings_drive_auto_summary))
                 },
                 trailingContent = {
                     Switch(
-                        checked = state.settings.backupSketches,
+                        checked = state.settings.autoDriveBackup,
                         enabled = !state.busy,
-                        onCheckedChange = viewModel::setBackupSketches,
+                        onCheckedChange = viewModel::setAutoDriveBackup,
                     )
                 },
             )
@@ -228,54 +222,6 @@ fun SettingsScreen(
                     state.usage.fileCount,
                 ),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            Text(
-                text = stringResource(
-                    if (state.settings.backupSketches) {
-                        R.string.settings_backup_state_on
-                    } else {
-                        R.string.settings_backup_state_off
-                    },
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary,
-            )
-
-            if (state.nearBackupQuota) {
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    text = stringResource(R.string.settings_backup_quota_warning),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
-
-            Spacer(Modifier.height(12.dp))
-
-            OutlinedButton(onClick = { openSystemBackupSettings(context) }) {
-                Icon(
-                    Icons.AutoMirrored.Outlined.OpenInNew,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                )
-                Text(
-                    text = stringResource(R.string.settings_backup_open_system),
-                    modifier = Modifier.padding(start = 8.dp),
-                )
-            }
-
-            Spacer(Modifier.height(24.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(24.dp))
-
-            // ── Google Drive ─────────────────────────────────────────────────
-            SectionHeader(stringResource(R.string.settings_drive_header))
-
-            Text(
-                text = stringResource(R.string.settings_drive_explainer),
-                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
@@ -524,25 +470,3 @@ fun SettingsScreen(
 private fun Modifier.clickableIfNotBusy(busy: Boolean, onClick: () -> Unit): Modifier =
     this.clickable(enabled = !busy, onClick = onClick)
 
-/**
- * Opens the system screen where Google backup is switched on.
- *
- * There is no public intent aimed squarely at backup settings, so this tries the
- * privacy screen that hosts it and falls back to the settings root.
- */
-private fun openSystemBackupSettings(context: android.content.Context) {
-    val candidates = listOf(
-        Intent("android.settings.BACKUP_AND_RESET_SETTINGS"),
-        Intent(AndroidSettings.ACTION_PRIVACY_SETTINGS),
-        Intent(AndroidSettings.ACTION_SETTINGS),
-    )
-    for (intent in candidates) {
-        try {
-            context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            return
-        } catch (e: ActivityNotFoundException) {
-            Log.d(TAG, "Settings screen ${intent.action} not present", e)
-        }
-    }
-    Log.w(TAG, "No system settings activity could be opened")
-}

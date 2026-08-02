@@ -191,16 +191,14 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
      * with the drawing is the completion. A failed save still records the day,
      * but says so rather than quietly dropping the photo.
      */
-    fun onSketchScanned(uri: Uri) {
+    fun onSketchCaptured(uri: Uri) {
         viewModelScope.launch {
             savingPhoto.value = true
             try {
-                val backupSketches = container.settingsRepository.settings.first().backupSketches
-
                 when (val mode = uiState.value.mode) {
                     is TodayMode.Draw -> {
                         val fileName = container.photoStore
-                            .save(uri, mode.prompt.day, backupSketches)
+                            .save(uri, mode.prompt.day)
                         container.journeyRepository.complete(
                             prompt = mode.prompt,
                             completedOn = today.value,
@@ -213,7 +211,7 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
 
                     is TodayMode.Rest -> {
                         val day = mode.finished.day
-                        val fileName = container.photoStore.save(uri, day, backupSketches)
+                        val fileName = container.photoStore.save(uri, day)
                         if (fileName == null) {
                             errorMessage.value = R.string.photo_save_failed
                         } else {

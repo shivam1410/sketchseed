@@ -66,7 +66,8 @@ import com.shivam.sketchseed.R
 import com.shivam.sketchseed.domain.model.DayRecord
 import com.shivam.sketchseed.domain.model.Difficulty
 import com.shivam.sketchseed.ui.components.DifficultyChip
-import com.shivam.sketchseed.ui.scan.rememberSketchScanner
+import com.shivam.sketchseed.ui.components.FocusLine
+import com.shivam.sketchseed.ui.capture.rememberSketchCaptureSheet
 import com.shivam.sketchseed.ui.search.ReferenceSearch
 import com.shivam.sketchseed.ui.theme.OverlineStyle
 import java.io.File
@@ -87,10 +88,15 @@ fun DayDetailScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
-    val startScan = rememberSketchScanner(onScanned = viewModel::onSketchScanned)
 
     var searchFor by remember { mutableStateOf<String?>(null) }
     val noBrowserMessage = stringResource(R.string.no_browser_found)
+    val captureFailedMessage = stringResource(R.string.capture_failed)
+
+    val addPhoto = rememberSketchCaptureSheet(
+        onCaptured = viewModel::onSketchCaptured,
+        onFailed = { scope.launch { snackbarHostState.showSnackbar(captureFailedMessage) } },
+    )
 
     state.errorMessage?.let { messageId ->
         val message = stringResource(messageId)
@@ -144,18 +150,19 @@ fun DayDetailScreen(
                     record = record,
                     photo = record.photoFileName?.let(resolvePhoto),
                     savingPhoto = state.savingPhoto,
-                    onAddPhoto = startScan,
+                    onAddPhoto = addPhoto,
                     onRemovePhoto = viewModel::removePhoto,
                 )
 
                 prompt != null -> OpenDay(
                     promptText = prompt.text,
                     difficulty = prompt.difficulty,
+                    focus = prompt.focus,
                     isBackfill = state.isBackfill,
                     savingPhoto = state.savingPhoto,
                     onFindReferences = { searchFor = prompt.text },
                     onMarkDone = viewModel::markDone,
-                    onAddPhoto = startScan,
+                    onAddPhoto = addPhoto,
                 )
             }
 
@@ -210,6 +217,7 @@ fun DayDetailScreen(
 private fun OpenDay(
     promptText: String,
     difficulty: Difficulty,
+    focus: String,
     isBackfill: Boolean,
     savingPhoto: Boolean,
     onFindReferences: () -> Unit,
@@ -226,6 +234,11 @@ private fun OpenDay(
 
     Spacer(Modifier.height(12.dp))
     DifficultyChip(difficulty)
+
+    if (focus.isNotBlank()) {
+        Spacer(Modifier.height(16.dp))
+        FocusLine(focus)
+    }
 
     if (isBackfill) {
         Spacer(Modifier.height(20.dp))
@@ -302,6 +315,11 @@ private fun CompletedDay(
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
+
+    record.focus?.takeIf { it.isNotBlank() }?.let {
+        Spacer(Modifier.height(16.dp))
+        FocusLine(it)
+    }
 
     Spacer(Modifier.height(24.dp))
 

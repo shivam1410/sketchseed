@@ -13,6 +13,7 @@ import com.shivam.sketchseed.AppContainer
 import com.shivam.sketchseed.SketchSeedApplication
 import com.shivam.sketchseed.ai.TipAvailability
 import com.shivam.sketchseed.backup.AuthOutcome
+import com.shivam.sketchseed.backup.AutoBackupScheduler
 import com.shivam.sketchseed.backup.BackupOutcome
 import com.shivam.sketchseed.data.PhotoUsage
 import com.shivam.sketchseed.data.Settings
@@ -33,15 +34,7 @@ data class SettingsUiState(
     val completedCount: Int = 0,
     val busy: Boolean = false,
     val driveBusy: Boolean = false,
-) {
-    /** Auto Backup silently drops app data past its quota, so warn before that. */
-    val nearBackupQuota: Boolean
-        get() = settings.backupSketches && usage.totalBytes > QUOTA_WARNING_BYTES
-
-    private companion object {
-        const val QUOTA_WARNING_BYTES = 20L * 1024 * 1024
-    }
-}
+)
 
 /** What to do once a Drive token is in hand. */
 private enum class DriveAction { BACK_UP, RESTORE }
@@ -91,21 +84,15 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
         initialValue = SettingsUiState(),
     )
 
-    // ── Auto Backup toggles ──────────────────────────────────────────────────
+    // ── Toggles ──────────────────────────────────────────────────────────────
 
-    /**
-     * Auto Backup rules are static XML, so the toggle physically relocates the
-     * photos between the backed-up and no-backup directories.
-     */
-    fun setBackupSketches(enabled: Boolean) {
+    fun setAutoDriveBackup(enabled: Boolean) {
         viewModelScope.launch {
-            busy.value = true
-            try {
-                container.settingsRepository.setBackupSketches(enabled)
-                container.photoStore.applyBackupPreference(enabled)
-                usage.value = container.photoStore.usage()
-            } finally {
-                busy.value = false
+            container.settingsRepository.setAutoDriveBackup(enabled)
+            if (enabled) {
+                AutoBackupScheduler.schedulePeriodic(container.appContext)
+            } else {
+                AutoBackupScheduler.cancel(container.appContext)
             }
         }
     }

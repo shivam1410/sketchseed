@@ -68,7 +68,8 @@ import com.shivam.sketchseed.domain.model.DayRecord
 import com.shivam.sketchseed.domain.model.JourneyProgress
 import com.shivam.sketchseed.domain.model.Prompt
 import com.shivam.sketchseed.ui.components.DifficultyChip
-import com.shivam.sketchseed.ui.scan.rememberSketchScanner
+import com.shivam.sketchseed.ui.components.FocusLine
+import com.shivam.sketchseed.ui.capture.rememberSketchCaptureSheet
 import com.shivam.sketchseed.ui.search.ReferenceSearch
 import com.shivam.sketchseed.ui.theme.OverlineStyle
 import java.io.File
@@ -108,7 +109,11 @@ fun TodayScreen(
 
     var searchFor by remember { mutableStateOf<String?>(null) }
     val noBrowserMessage = stringResource(R.string.no_browser_found)
-    val startScan = rememberSketchScanner(onScanned = viewModel::onSketchScanned)
+    val captureFailedMessage = stringResource(R.string.capture_failed)
+    val addPhoto = rememberSketchCaptureSheet(
+        onCaptured = viewModel::onSketchCaptured,
+        onFailed = { scope.launch { snackbarHostState.showSnackbar(captureFailedMessage) } },
+    )
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -158,7 +163,7 @@ fun TodayScreen(
                     savingPhoto = state.savingPhoto,
                     onFindReferences = { searchFor = mode.prompt.text },
                     onMarkDone = viewModel::markDone,
-                    onAddPhoto = startScan,
+                    onAddPhoto = addPhoto,
                     onRequestTip = viewModel::requestTip,
                     onDismissTip = viewModel::dismissTip,
                 )
@@ -168,7 +173,7 @@ fun TodayScreen(
                     nextDay = mode.nextDay,
                     savingPhoto = state.savingPhoto,
                     photo = mode.finished.photoFileName?.let(resolvePhoto),
-                    onAddPhoto = startScan,
+                    onAddPhoto = addPhoto,
                     onOpenDay = { onOpenDay(mode.finished.day) },
                 )
 
@@ -317,6 +322,12 @@ private fun DrawBlock(
 
     Spacer(Modifier.height(16.dp))
     DifficultyChip(prompt.difficulty)
+
+    if (prompt.focus.isNotBlank()) {
+        Spacer(Modifier.height(20.dp))
+        FocusLine(prompt.focus)
+    }
+
     Spacer(Modifier.height(24.dp))
 
     TipSection(tip = tip, onRequestTip = onRequestTip, onDismissTip = onDismissTip)

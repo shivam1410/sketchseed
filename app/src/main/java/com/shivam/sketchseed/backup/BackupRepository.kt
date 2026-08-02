@@ -98,29 +98,7 @@ class BackupRepository(
                 local.inputStream().use { archive.read(it, scratch) }
             }
 
-            val keepPhotosInBackup = settingsRepository.settings.first().backupSketches
-
-            // Replace wholesale: clear what is here before adopting the archive,
-            // so no orphaned sketch from the old journey survives.
-            photoStore.clear()
-            var restoredPhotos = 0
-            contents.photos.forEach { (name, file) ->
-                if (photoStore.adopt(file, name, keepPhotosInBackup)) restoredPhotos++
-            }
-
-            // Drop photo references the archive did not actually carry, rather
-            // than leaving records pointing at files that are not there.
-            val records = contents.records.map { record ->
-                if (record.photoFileName != null && !contents.photos.containsKey(record.photoFileName)) {
-                    record.copy(photoFileName = null)
-                } else {
-                    record
-                }
-            }
-            journeyRepository.replaceAll(records)
-
-            Log.i(TAG, "Restored ${records.size} days and $restoredPhotos sketches")
-            BackupOutcome.Restored(records = records.size, photos = restoredPhotos)
+            applyRestore(contents)
         } catch (e: BackupFormatException) {
             BackupOutcome.Failed(e.message ?: DEFAULT_ERROR, e)
         } catch (e: DriveException) {
@@ -223,12 +201,10 @@ class BackupRepository(
      * in how they treat photos or dangling references.
      */
     private suspend fun applyRestore(contents: BackupContents): BackupOutcome {
-        val keepPhotosInBackup = settingsRepository.settings.first().backupSketches
-
         photoStore.clear()
         var restoredPhotos = 0
         contents.photos.forEach { (name, file) ->
-            if (photoStore.adopt(file, name, keepPhotosInBackup)) restoredPhotos++
+            if (photoStore.adopt(file, name)) restoredPhotos++
         }
 
         // Drop photo references the archive did not actually carry, rather than

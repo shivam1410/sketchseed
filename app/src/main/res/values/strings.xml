@@ -34,6 +34,17 @@
 
     <string name="photo_save_failed">That photo couldn\'t be saved, but the day is marked done. Try adding it again.</string>
 
+    <!-- Sketch capture -->
+    <string name="capture_sheet_title">Add your sketch</string>
+    <string name="capture_take_photo">Take a photo</string>
+    <string name="capture_take_photo_summary">Opens your camera</string>
+    <string name="capture_pick_gallery">Choose from gallery</string>
+    <string name="capture_pick_gallery_summary">Pick a photo you already took</string>
+    <string name="capture_failed">Couldn\'t open the camera on this device.</string>
+
+    <!-- Prompt focus -->
+    <string name="focus_label">Focus</string>
+
     <!-- Reference search -->
     <string name="search_sheet_title">Reference images for “%1$s”</string>
     <string name="search_pinterest">Pinterest</string>
@@ -78,21 +89,15 @@
     <string name="settings_title">Settings</string>
     <string name="settings_open">Open settings</string>
 
-    <string name="settings_backup_header">Google backup</string>
-    <string name="settings_backup_explainer">Your journey, prompts, completion dates and streak are backed up to your Google account by Android and restored automatically when you set up a new phone. No sign-in needed.</string>
-    <string name="settings_backup_images_title">Include sketch photos</string>
-    <string name="settings_backup_images_summary">Photos count against the 25 MB app backup limit. Turn off to keep them on this device only.</string>
     <plurals name="settings_backup_storage">
         <item quantity="one">Sketches on device: %1$s across %2$d photo</item>
         <item quantity="other">Sketches on device: %1$s across %2$d photos</item>
     </plurals>
-    <string name="settings_backup_state_on">Backed up to Google</string>
-    <string name="settings_backup_state_off">On this device only</string>
-    <string name="settings_backup_quota_warning">Approaching the 25 MB backup limit. Older photos may not be backed up.</string>
-    <string name="settings_backup_open_system">Open Android backup settings</string>
 
     <string name="settings_drive_header">Google Drive backup</string>
-    <string name="settings_drive_explainer">Keeps a copy of your journey and every sketch in a SketchSeed folder in your own Google Drive. Unlike the automatic backup above it has no size limit, survives switching to a signed release build, and you can see and move the file yourself.</string>
+    <string name="settings_drive_explainer">Keeps your journey and every sketch in your own Google Drive, in a hidden folder only this app can read. This is the only backup — Android\'s built-in one is switched off, because its 25 MB limit drops data silently and it resets whenever the app is re-signed. Manage or delete it from Drive under Settings, Manage apps.</string>
+    <string name="settings_drive_auto_title">Back up automatically</string>
+    <string name="settings_drive_auto_summary">Uploads on its own a couple of minutes after you finish a day, and once daily as a safety net. Needs a connection; never interrupts you to sign in.</string>
     <string name="settings_drive_backup_now">Back up to Drive now</string>
     <string name="settings_drive_restore">Restore from Drive</string>
     <string name="settings_drive_never">Not backed up to Drive yet</string>

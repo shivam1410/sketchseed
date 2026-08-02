@@ -120,13 +120,12 @@ class DayDetailViewModel(
         }
     }
 
-    fun onSketchScanned(uri: Uri) {
+    fun onSketchCaptured(uri: Uri) {
         viewModelScope.launch {
             savingPhoto.value = true
             try {
                 val state = uiState.value
-                val backupSketches = container.settingsRepository.settings.first().backupSketches
-                val fileName = container.photoStore.save(uri, day, backupSketches)
+                val fileName = container.photoStore.save(uri, day)
 
                 if (fileName == null) {
                     errorMessage.value = R.string.photo_save_failed

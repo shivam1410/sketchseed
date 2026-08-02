@@ -19,7 +19,7 @@ import java.time.LocalDate
  * saves here.
  */
 class AppContainer(context: Context) {
-    private val appContext = context.applicationContext
+    val appContext: Context = context.applicationContext
 
     val promptRepository = PromptRepository(appContext)
     val journeyRepository = JourneyRepository(appContext.appDataStore)

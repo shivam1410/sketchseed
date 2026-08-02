@@ -1,20 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Needed so Play Services can fetch the document-scanner module and so
-         AICore can fetch the on-device Gemini Nano model. The app itself never
-         talks to a server: there is no account, no sync, no analytics. -->
+    <!-- Needed so AICore can fetch the on-device Gemini Nano model. The app
+         itself never talks to a server for the journey: no account, no sync,
+         no analytics. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- The ML Kit document scanner runs camera capture inside its own Play
-         Services activity, so this app does not request CAMERA itself. -->
+    <!-- CAMERA is deliberately NOT declared. Sketch photos are taken by the
+         user's own camera app via ACTION_IMAGE_CAPTURE, which needs no
+         permission — but only while this app declares none. Declaring CAMERA
+         here would make the platform start requiring it. -->
 
+    <!-- Android Auto Backup is deliberately off. Its 25 MB quota silently drops
+         data past the limit, it resets when the signing key changes, and it can
+         neither be triggered nor inspected by the user. Google Drive backup
+         replaces it, with an exportable zip as the escape hatch. -->
     <application
+        android:allowBackup="false"
         android:name=".SketchSeedApplication"
-        android:allowBackup="true"
-        android:backupInForeground="true"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -32,10 +35,17 @@
             </intent-filter>
         </activity>
 
-        <!-- Download the document scanner module ahead of first use. -->
-        <meta-data
-            android:name="com.google.mlkit.vision.DEPENDENCIES"
-            android:value="docscanner" />
+        <!-- Lets the camera app write the captured photo into our cache. Only
+             the capture directory is exposed; saved sketches stay private. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>
