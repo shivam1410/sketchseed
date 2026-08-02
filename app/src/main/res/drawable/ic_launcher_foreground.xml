@@ -1,33 +1,95 @@
+<!--
+  Adaptive icon foreground: a sprout growing out of a graphite pencil.
+
+  The canvas is 108dp but launchers mask it down: only a 72dp circle is drawn
+  and the inner 66dp is the safe zone. Every point of the artwork therefore
+  stays within ~34dp of the centre (54,54) — the upper-right leaf tip is the
+  binding constraint, which is why it reaches up rather than out.
+
+  The circle and squiggles from the original illustration are deliberately
+  dropped: the launcher supplies its own shape, and pencil hatching turns to
+  mush at 48dp.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- A sprouting seed drawn by a pencil: the app mark. -->
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="1.06"
+        android:scaleY="1.06">
 
-    <!-- Pencil body, angled from lower-left to upper-right -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M35.5,72.5 L30.5,80.5 L38.5,75.5 L69.0,45.0 L66.0,42.0 Z" />
-    <path
-        android:fillColor="#FFD79A"
-        android:pathData="M66.0,42.0 L69.0,45.0 L72.5,41.5 Q74.0,40.0 72.5,38.5 L69.5,35.5 Q68.0,34.0 66.5,35.5 Z" />
+        <!-- ── Sprout ──────────────────────────────────────────────────── -->
 
-    <!-- Seed / sprout -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M54.0,74.0 m-6.5,0 a6.5,8 0 1,0 13,0 a6.5,8 0 1,0 -13,0" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M54.0,66.0 L54.0,54.0"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="3.5"
-        android:strokeLineCap="round" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M54.0,58.0 Q44.0,56.0 43.0,46.0 Q53.0,47.0 54.0,58.0 Z" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M54.0,54.0 Q64.0,52.0 65.0,42.0 Q55.0,43.0 54.0,54.0 Z" />
+        <path
+            android:pathData="M54,48 C54,42 54,37 54,31"
+            android:strokeColor="#4F7A38"
+            android:strokeWidth="2.6"
+            android:strokeLineCap="round" />
+
+        <!-- Larger leaf, upper right -->
+        <path
+            android:pathData="M54,37 C57,29 63,23.5 70,21.5 C70,30 65,36.5 54,37 Z"
+            android:fillColor="#7BA85C"
+            android:strokeColor="#3F6430"
+            android:strokeWidth="1.2"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M55,36.6 C60,32.5 65,27.5 69,22.5"
+            android:strokeColor="#3F6430"
+            android:strokeWidth="1"
+            android:strokeLineCap="round" />
+
+        <!-- Smaller leaf, left -->
+        <path
+            android:pathData="M54,44 C50,38.5 45,34.5 38.5,32.5 C39,39.5 44,43.5 54,44 Z"
+            android:fillColor="#8CB86B"
+            android:strokeColor="#3F6430"
+            android:strokeWidth="1.2"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M53.2,43.6 C48.5,40 43.5,36.5 39.5,33.6"
+            android:strokeColor="#3F6430"
+            android:strokeWidth="1"
+            android:strokeLineCap="round" />
+
+        <!-- ── Pencil ──────────────────────────────────────────────────── -->
+
+        <!-- Soil mounded in the cut ferrule -->
+        <path
+            android:pathData="M42,49.5 C44,43.5 64,43.5 66,49.5 Z"
+            android:fillColor="#4A3B2A" />
+
+        <!-- Body, with two facets so it reads as hexagonal without hatching -->
+        <path
+            android:pathData="M42,49.5 H66 V68 H42 Z"
+            android:fillColor="#3A3D42" />
+        <path
+            android:pathData="M42,49.5 H49 V68 H42 Z"
+            android:fillColor="#4E5257" />
+        <path
+            android:pathData="M61,49.5 H66 V68 H61 Z"
+            android:fillColor="#2B2E33" />
+
+        <!-- Rim of the cut ferrule -->
+        <path
+            android:pathData="M42,49 H66 V51.2 H42 Z"
+            android:fillColor="#6E747A" />
+
+        <!-- Sharpened wood -->
+        <path
+            android:pathData="M42,68 L54,85 L66,68 Z"
+            android:fillColor="#D9B489" />
+        <path
+            android:pathData="M54,68 L54,85 L66,68 Z"
+            android:fillColor="#C29A6E" />
+
+        <!-- Graphite point -->
+        <path
+            android:pathData="M48,77 L54,85 L60,77 Z"
+            android:fillColor="#26282C" />
+    </group>
 </vector>
