@@ -1,10 +1,12 @@
 <!--
-  Themed-icon layer. Android tints this a single colour from the user's
-  wallpaper, so it has to read as a silhouette: the colour separation between
-  leaf, wood and graphite disappears entirely.
+  Themed-icon layer. The system tints this a single colour from the user's
+  wallpaper, so the gradients and cream veins are gone and the sprout has to
+  survive as a flat silhouette.
 
-  Solid shapes only, with the leaves detached from the body by a small gap so
-  the sprout stays legible once everything is one flat colour.
+  The veins become real holes, punched with the even-odd rule, rather than
+  cream fills — otherwise each leaf collapses into a featureless blob. Black
+  fills and no tint of our own: the system supplies the colour and a hardcoded
+  tint would fight it.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -12,32 +14,27 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Black fills with no tint of our own: the system replaces the colour
-         entirely, and a hardcoded tint here would fight it. -->
-    <group
-        android:pivotX="54"
-        android:pivotY="54"
-        android:scaleX="1.06"
-        android:scaleY="1.06">
+    <!-- Stalk, forking left -->
+    <path
+        android:pathData="M52,80 C52,71 52,64 54,57"
+        android:strokeColor="#000000"
+        android:strokeWidth="3.4"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M52,71 C50,67 49,63 50,59"
+        android:strokeColor="#000000"
+        android:strokeWidth="2.8"
+        android:strokeLineCap="round" />
 
-        <!-- Stem -->
-        <path
-            android:pathData="M54,49 C54,43 54,38 54,32"
-            android:strokeColor="#000000"
-            android:strokeWidth="3.2"
-            android:strokeLineCap="round" />
-
-        <!-- Leaves, slightly detached so the sprout still reads once flat -->
-        <path
-            android:pathData="M55.5,37 C58,29 63.5,23.5 70,21.5 C70,30 65,36.5 55.5,37 Z"
-            android:fillColor="#000000" />
-        <path
-            android:pathData="M52.5,44 C49,38.5 44.5,34.5 38.5,32.5 C39,39.5 44,43.5 52.5,44 Z"
-            android:fillColor="#000000" />
-
-        <!-- Pencil as one solid silhouette -->
-        <path
-            android:pathData="M42,47.5 H66 V68 L54,85 L42,68 Z"
-            android:fillColor="#000000" />
-    </group>
+    <!-- Leaves, each with its vein punched out -->
+    <path
+        android:fillType="evenOdd"
+        android:fillColor="#000000"
+        android:pathData="M54,56 C46,44 49,29 70,25 C75,42 69,53 54,56 Z
+                          M56,52 C59,43 63,34 68,27 C64,38 60,46 56,52 Z" />
+    <path
+        android:fillType="evenOdd"
+        android:fillColor="#000000"
+        android:pathData="M51,59 C44,47 38,39 30,42 C34,54 42,58 51,59 Z
+                          M49,56 C45.5,51 41,46.5 35,43 C39.5,48.5 44.5,52.5 49,57 Z" />
 </vector>
