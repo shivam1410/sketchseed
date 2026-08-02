@@ -30,11 +30,17 @@ import kotlinx.coroutines.launch
 sealed interface TodayMode {
     data object Loading : TodayMode
 
+    /** The device clock is behind the pack's start date. */
+    data class NotStarted(val startDate: LocalDate) : TodayMode
+
     /** There is a prompt waiting to be drawn. */
     data class Draw(val prompt: Prompt) : TodayMode
 
-    /** Today's sketch is done; the next prompt stays sealed until tomorrow. */
-    data class Rest(val finished: DayRecord, val nextDay: Int) : TodayMode
+    /** Today's sketch is done; tomorrow's prompt stays sealed. */
+    data class Rest(val finished: DayRecord, val nextDay: Int?) : TodayMode
+
+    /** The hundred days have elapsed but gaps remain, open to back-filling. */
+    data class WindowClosed(val completed: Int) : TodayMode
 
     /** All hundred are done. */
     data object Finished : TodayMode
@@ -45,6 +51,9 @@ sealed interface TipState {
     data object Hidden : TipState
     data object Idle : TipState
     data object Working : TipState
+
+    /** AICore is fetching Gemini Nano. [bytesDownloaded] is 0 until it reports. */
+    data class Preparing(val bytesDownloaded: Long) : TipState
     data class Ready(val text: String) : TipState
     data class Error(@param:StringRes val messageId: Int) : TipState
 }
@@ -54,6 +63,9 @@ data class TodayUiState(
     val progress: JourneyProgress? = null,
     val tip: TipState = TipState.Hidden,
     val savingPhoto: Boolean = false,
+    /** Days behind today that are still undrawn. */
+    val missedCount: Int = 0,
+    @param:StringRes val errorMessage: Int? = null,
 )
 
 private data class Snapshot(
@@ -64,12 +76,18 @@ private data class Snapshot(
     val tip: TipState,
 )
 
+private data class Transient(
+    val savingPhoto: Boolean,
+    @param:StringRes val errorMessage: Int?,
+)
+
 class TodayViewModel(private val container: AppContainer) : ViewModel() {
 
     private val pack = MutableStateFlow<PromptPack?>(null)
     private val today = MutableStateFlow(container.today())
     private val tip = MutableStateFlow<TipState>(TipState.Idle)
     private val savingPhoto = MutableStateFlow(false)
+    private val errorMessage = MutableStateFlow<Int?>(null)
 
     init {
         viewModelScope.launch {
@@ -83,6 +101,8 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
+    private val transient = combine(savingPhoto, errorMessage, ::Transient)
+
     val uiState: StateFlow<TodayUiState> = combine(
         container.journeyRepository.records,
         container.settingsRepository.settings,
@@ -90,29 +110,40 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
         today,
         tip,
         ::Snapshot,
-    ).combine(savingPhoto) { snapshot, saving ->
-        snapshot.toUiState(saving)
+    ).combine(transient) { snapshot, extras ->
+        snapshot.toUiState(extras)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
         initialValue = TodayUiState(),
     )
 
-    private fun Snapshot.toUiState(saving: Boolean): TodayUiState {
-        val loadedPack = pack ?: return TodayUiState(savingPhoto = saving)
-        val progress = JourneyProgress.from(records, loadedPack.totalDays, today)
+    private fun Snapshot.toUiState(extras: Transient): TodayUiState {
+        val loadedPack = pack ?: return TodayUiState(
+            savingPhoto = extras.savingPhoto,
+            errorMessage = extras.errorMessage,
+        )
+
+        val progress = JourneyProgress.from(
+            records = records,
+            totalDays = loadedPack.totalDays,
+            startDate = loadedPack.startDate,
+            today = today,
+        )
 
         val mode = when {
+            progress.hasNotStarted -> TodayMode.NotStarted(loadedPack.startDate)
             progress.isComplete -> TodayMode.Finished
+            progress.isWindowClosed -> TodayMode.WindowClosed(progress.completedCount)
 
             progress.canDrawToday ->
-                loadedPack.promptFor(progress.currentDay)
+                progress.currentDay
+                    ?.let { loadedPack.promptFor(it) }
                     ?.let { TodayMode.Draw(it) }
                     ?: TodayMode.Finished
 
-            else -> progress.records
-                .lastOrNull { it.completedOn == today }
-                ?.let { TodayMode.Rest(finished = it, nextDay = progress.currentDay) }
+            else -> progress.todayRecord
+                ?.let { TodayMode.Rest(finished = it, nextDay = progress.currentDay?.plus(1)) }
                 ?: TodayMode.Finished
         }
 
@@ -121,7 +152,9 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
             progress = progress,
             // A tip only makes sense while there is something left to draw.
             tip = if (mode is TodayMode.Draw && settings.aiTipsEnabled) tip else TipState.Hidden,
-            savingPhoto = saving,
+            savingPhoto = extras.savingPhoto,
+            missedCount = progress.missedDays.size,
+            errorMessage = extras.errorMessage,
         )
     }
 
@@ -129,7 +162,7 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
      * Re-reads the date.
      *
      * Called on resume so an app left open past midnight rolls over instead of
-     * showing yesterday's state.
+     * showing yesterday's prompt.
      */
     fun refreshDate() {
         val now = container.today()
@@ -155,7 +188,8 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
      * Stores a scanned sketch.
      *
      * If today's prompt is not marked done yet, scanning finishes it — turning up
-     * with the drawing is the completion.
+     * with the drawing is the completion. A failed save still records the day,
+     * but says so rather than quietly dropping the photo.
      */
     fun onSketchScanned(uri: Uri) {
         viewModelScope.launch {
@@ -174,12 +208,15 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
                             tip = (tip.value as? TipState.Ready)?.text,
                         )
                         tip.value = TipState.Idle
+                        if (fileName == null) errorMessage.value = R.string.photo_save_failed
                     }
 
                     is TodayMode.Rest -> {
                         val day = mode.finished.day
                         val fileName = container.photoStore.save(uri, day, backupSketches)
-                        if (fileName != null) {
+                        if (fileName == null) {
+                            errorMessage.value = R.string.photo_save_failed
+                        } else {
                             // Replace, so an old photo does not linger on disk.
                             mode.finished.photoFileName
                                 ?.let { container.photoStore.delete(it) }
@@ -195,16 +232,25 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
+    fun dismissError() {
+        errorMessage.value = null
+    }
+
     fun requestTip() {
         val prompt = currentPrompt() ?: return
-        if (tip.value is TipState.Working) return
+        if (tip.value is TipState.Working || tip.value is TipState.Preparing) return
 
         viewModelScope.launch {
             tip.value = TipState.Working
-            val result = container.tipGenerator.generate(prompt.text, prompt.difficulty)
+            val result = container.tipGenerator.generate(
+                promptText = prompt.text,
+                difficulty = prompt.difficulty,
+                onPreparing = { bytes -> tip.value = TipState.Preparing(bytes) },
+            )
             tip.value = when (result) {
                 is TipResult.Success -> TipState.Ready(result.tip)
                 TipResult.Unsupported -> TipState.Error(R.string.tip_unavailable)
+                TipResult.TimedOut -> TipState.Error(R.string.tip_timed_out)
                 is TipResult.Failed -> {
                     Log.w(TAG, "Tip generation failed", result.cause)
                     TipState.Error(R.string.tip_failed)

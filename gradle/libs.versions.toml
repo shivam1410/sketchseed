@@ -13,6 +13,9 @@ documentScanner = "16.0.0"
 genaiPrompt = "1.0.0-beta4"
 junit = "4.13.2"
 kotlinxCoroutinesTest = "1.10.2"
+androidxTestExtJunit = "1.2.1"
+androidxTestRunner = "1.6.2"
+androidxTestCore = "1.6.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -39,6 +42,9 @@ mlkit-genai-prompt = { group = "com.google.mlkit", name = "genai-prompt", versio
 
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutinesTest" }
+androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestExtJunit" }
+androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
+androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

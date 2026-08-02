@@ -28,7 +28,10 @@ sealed interface DayCell {
     /** Today's prompt, revealed and waiting. */
     data class Current(override val day: Int, val prompt: Prompt) : DayCell
 
-    /** Not yet earned. The prompt is deliberately not carried in this type. */
+    /** A past day that went undrawn. Still open to back-filling. */
+    data class Missed(override val day: Int, val prompt: Prompt) : DayCell
+
+    /** Not yet reached. The prompt is deliberately not carried in this type. */
     data class Locked(override val day: Int) : DayCell
 }
 
@@ -60,21 +63,27 @@ class JourneyViewModel(container: AppContainer) : ViewModel() {
     ) { records, loadedPack, now ->
         if (loadedPack == null) return@combine JourneyUiState()
 
-        val progress = JourneyProgress.from(records, loadedPack.totalDays, now)
+        val progress = JourneyProgress.from(
+            records = records,
+            totalDays = loadedPack.totalDays,
+            startDate = loadedPack.startDate,
+            today = now,
+        )
         val byDay = records.associateBy { it.day }
 
         val cells = (1..loadedPack.totalDays).map { day ->
             val record = byDay[day]
+            val prompt = loadedPack.promptFor(day)
+
             when {
                 record != null -> DayCell.Done(day, record)
 
-                // Only ever reveal a future prompt when it is genuinely today's.
-                progress.isRevealed(day) ->
-                    loadedPack.promptFor(day)
-                        ?.let { DayCell.Current(day, it) }
-                        ?: DayCell.Locked(day)
+                // Never hand a prompt to a cell the calendar has not reached.
+                !progress.isRevealed(day) || prompt == null -> DayCell.Locked(day)
 
-                else -> DayCell.Locked(day)
+                day == progress.currentDay -> DayCell.Current(day, prompt)
+
+                else -> DayCell.Missed(day, prompt)
             }
         }
 

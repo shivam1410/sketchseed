@@ -9,6 +9,7 @@ import androidx.core.graphics.scale
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.io.InputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -122,34 +123,56 @@ class PhotoStore(private val context: Context) {
      * decode. That keeps a large photo from ever being fully expanded in memory.
      */
     private fun decodeDownscaled(source: Uri): Bitmap? {
+        // Pass one: bounds only. decodeStream deliberately returns null when
+        // inJustDecodeBounds is set — it reports through the options object — so
+        // the null check here must be on the *stream*, never on the return value.
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        try {
-            context.contentResolver.openInputStream(source)?.use {
-                BitmapFactory.decodeStream(it, null, bounds)
-            } ?: return null
-        } catch (e: IOException) {
-            Log.e(TAG, "Could not read scanned image bounds", e)
-            return null
+        val readBounds = openStream(source) { stream ->
+            BitmapFactory.decodeStream(stream, null, bounds)
+            true
         }
+        if (readBounds != true) return null
 
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
             Log.e(TAG, "Scanned image had no usable dimensions")
             return null
         }
 
+        // Pass two: decode at roughly the target size.
         val options = BitmapFactory.Options().apply {
             inSampleSize = sampleSizeFor(bounds.outWidth, bounds.outHeight)
         }
-        val decoded = try {
-            context.contentResolver.openInputStream(source)?.use {
-                BitmapFactory.decodeStream(it, null, options)
-            }
-        } catch (e: IOException) {
-            Log.e(TAG, "Could not decode scanned image", e)
-            null
-        } ?: return null
+        val decoded = openStream(source) { stream ->
+            BitmapFactory.decodeStream(stream, null, options)
+        }
+        if (decoded == null) {
+            Log.e(TAG, "Scanned image could not be decoded")
+            return null
+        }
 
         return scaleToBound(decoded)
+    }
+
+    /**
+     * Opens [source] and runs [block] on it.
+     *
+     * The scanner hands back a content URI owned by Play Services, so this can
+     * fail with [SecurityException] as well as [IOException] if the grant has
+     * lapsed. Both are reported rather than thrown, since a failed read must not
+     * take down the coroutine that is also recording the day.
+     */
+    private fun <T> openStream(source: Uri, block: (InputStream) -> T?): T? = try {
+        context.contentResolver.openInputStream(source)?.use(block)
+            ?: run {
+                Log.e(TAG, "Could not open $source; no stream returned")
+                null
+            }
+    } catch (e: IOException) {
+        Log.e(TAG, "Could not read $source", e)
+        null
+    } catch (e: SecurityException) {
+        Log.e(TAG, "Not permitted to read $source", e)
+        null
     }
 
     private fun sampleSizeFor(width: Int, height: Int): Int {

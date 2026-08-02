@@ -19,6 +19,19 @@
     <string name="journey_complete_body">You showed up %1$d times. Have a look back at everything you drew.</string>
     <string name="view_journey">View journey</string>
 
+    <string name="not_started_title">Not yet</string>
+    <string name="not_started_body">The hundred days begin on %1$s.</string>
+
+    <string name="window_closed_title">The hundred days are up</string>
+    <string name="window_closed_body">You finished %1$d of them. The ones you missed are still open if you want to go back and draw them.</string>
+
+    <plurals name="catch_up_prompt">
+        <item quantity="one">%1$d day left to catch up</item>
+        <item quantity="other">%1$d days left to catch up</item>
+    </plurals>
+
+    <string name="photo_save_failed">That photo couldn\'t be saved, but the day is marked done. Try adding it again.</string>
+
     <!-- Reference search -->
     <string name="search_sheet_title">Reference images for “%1$s”</string>
     <string name="search_pinterest">Pinterest</string>
@@ -37,12 +50,16 @@
     <string name="tip_heading">Tip</string>
     <string name="tip_unavailable">On-device tips aren\'t available on this device.</string>
     <string name="tip_failed">Couldn\'t generate a tip. Try again.</string>
+    <string name="tip_preparing">Downloading the on-device model… %1$s</string>
+    <string name="tip_preparing_starting">Preparing the on-device model…</string>
+    <string name="tip_timed_out">The model is taking too long. It may still be downloading — try again in a bit.</string>
 
     <!-- Journey / calendar -->
     <string name="journey_title">Journey</string>
     <string name="journey_locked_day">Day %1$d, not unlocked yet</string>
     <string name="journey_completed_day">Day %1$d, %2$s, completed</string>
     <string name="journey_today_day">Day %1$d, today\'s prompt</string>
+    <string name="journey_missed_day">Day %1$d, %2$s, missed but still open</string>
     <string name="journey_stat_completed">Completed</string>
     <string name="journey_stat_streak">Streak</string>
     <string name="journey_stat_best">Best streak</string>
@@ -51,7 +68,8 @@
     <string name="day_detail_title">Day %1$d</string>
     <string name="day_detail_completed_on">Completed %1$s</string>
     <string name="day_detail_no_photo">No photo of this one.</string>
-    <string name="day_detail_locked">This prompt is still sealed. Keep going.</string>
+    <string name="day_detail_locked">This prompt is still sealed. Come back on its day.</string>
+    <string name="day_detail_backfill_hint">You missed this one. You can still draw it to complete the hundred, though it won\'t bring back the streak.</string>
     <string name="delete_photo">Remove photo</string>
 
     <!-- Settings -->

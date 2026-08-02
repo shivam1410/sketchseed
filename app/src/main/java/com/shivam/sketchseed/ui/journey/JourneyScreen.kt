@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -24,6 +26,7 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -92,27 +95,56 @@ fun JourneyScreen(
         ) {
             state.progress?.let { progress ->
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    Row(
+                    // Every number lives here rather than on Today, which stays
+                    // reserved for the one thing that matters: the prompt.
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
+                            .padding(bottom = 20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        StatPill(
-                            label = stringResource(R.string.journey_stat_completed),
-                            value = stringResource(
-                                R.string.progress_fraction,
-                                progress.completedCount,
-                                progress.totalDays,
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                        ) {
+                            StatPill(
+                                label = stringResource(R.string.journey_stat_completed),
+                                value = stringResource(
+                                    R.string.progress_fraction,
+                                    progress.completedCount,
+                                    progress.totalDays,
+                                ),
+                            )
+                            StatPill(
+                                label = stringResource(R.string.journey_stat_streak),
+                                value = progress.currentStreak.toString(),
+                            )
+                            StatPill(
+                                label = stringResource(R.string.journey_stat_best),
+                                value = progress.bestStreak.toString(),
+                            )
+                        }
+
+                        Spacer(Modifier.height(16.dp))
+
+                        LinearProgressIndicator(
+                            progress = {
+                                progress.completedCount.toFloat() / progress.totalDays
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(50)),
+                        )
+
+                        Spacer(Modifier.height(8.dp))
+
+                        Text(
+                            text = stringResource(
+                                R.string.progress_percent,
+                                progress.percentComplete,
                             ),
-                        )
-                        StatPill(
-                            label = stringResource(R.string.journey_stat_streak),
-                            value = progress.currentStreak.toString(),
-                        )
-                        StatPill(
-                            label = stringResource(R.string.journey_stat_best),
-                            value = progress.bestStreak.toString(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -147,12 +179,14 @@ private fun DayTile(
         )
 
         is DayCell.Current -> stringResource(R.string.journey_today_day, cell.day)
+        is DayCell.Missed -> stringResource(R.string.journey_missed_day, cell.day, cell.prompt.text)
         is DayCell.Locked -> stringResource(R.string.journey_locked_day, cell.day)
     }
 
     val container = when (cell) {
         is DayCell.Done -> MaterialTheme.colorScheme.surfaceVariant
         is DayCell.Current -> MaterialTheme.colorScheme.primaryContainer
+        is DayCell.Missed -> MaterialTheme.colorScheme.surfaceContainerLow
         is DayCell.Locked -> MaterialTheme.colorScheme.surfaceContainerLow
     }
 
@@ -162,10 +196,16 @@ private fun DayTile(
             .clip(shape)
             .background(container)
             .then(
-                if (cell is DayCell.Current) {
-                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, shape)
-                } else {
-                    Modifier
+                when (cell) {
+                    is DayCell.Current ->
+                        Modifier.border(2.dp, MaterialTheme.colorScheme.primary, shape)
+                    // Outlined rather than filled: still open, but overdue.
+                    is DayCell.Missed -> Modifier.border(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant,
+                        shape,
+                    )
+                    else -> Modifier
                 },
             )
             .clickable(enabled = cell !is DayCell.Locked, onClick = onClick)
@@ -195,6 +235,13 @@ private fun DayTile(
                 onImage = false,
             )
 
+            is DayCell.Missed -> DayLabel(
+                day = cell.day,
+                caption = cell.prompt.text,
+                onImage = false,
+                dimmed = true,
+            )
+
             is DayCell.Locked -> Icon(
                 Icons.Outlined.Lock,
                 contentDescription = null,
@@ -206,14 +253,23 @@ private fun DayTile(
 }
 
 @Composable
-private fun DayLabel(day: Int, caption: String, onImage: Boolean) {
+private fun DayLabel(
+    day: Int,
+    caption: String,
+    onImage: Boolean,
+    dimmed: Boolean = false,
+) {
     // A scrim keeps the number legible over an arbitrary photograph.
     val scrim = if (onImage) {
         Modifier.background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.35f))
     } else {
         Modifier
     }
-    val tint = if (onImage) Color.White else MaterialTheme.colorScheme.onSurface
+    val tint = when {
+        onImage -> Color.White
+        dimmed -> MaterialTheme.colorScheme.onSurfaceVariant
+        else -> MaterialTheme.colorScheme.onSurface
+    }
 
     Box(
         modifier = Modifier

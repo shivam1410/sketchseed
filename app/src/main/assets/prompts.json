@@ -1,6 +1,8 @@
 {
   "packId": "core-100",
   "title": "The First Hundred",
+  "_comment": "startDate anchors the whole pack to the calendar. Every install computes today's day number from this date, so everyone running this build sees the same prompt on the same day without a server. Changing it reshuffles which prompt lands on which date for everybody.",
+  "startDate": "2026-08-02",
   "prompts": [
     { "day": 1,   "text": "Apple",            "difficulty": "EASY" },
     { "day": 2,   "text": "Key",              "difficulty": "EASY" },

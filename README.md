@@ -8,19 +8,37 @@ kills the habit. It says *"here's today's sketch"* and gets out of the way.
 
 ## How the journey works
 
-Two counters that look similar are deliberately kept apart:
+The day number comes from the **calendar**, not from your personal progress. Day N is
+the Nth day after the pack's `startDate`, which is baked into `prompts.json`. So
+everyone running the same build sees the same prompt on the same date — with no
+server, no accounts, and no sync. Just arithmetic on a date.
+
+Three ideas that look similar are deliberately kept apart:
 
 | | What it means | What a missed day does |
 |---|---|---|
-| **Day 17 of 100** | Your 17th finished sketch | Nothing. The journey waits. |
-| **Streak** | Consecutive calendar days drawn | Resets to zero. |
+| **Day 17 of 100** | What the calendar says today is | Nothing — it moves on regardless |
+| **Completed** | How many you've actually finished | Nothing. Missed days stay open |
+| **Streak** | Consecutive calendar days you drew | Resets to zero, permanently |
 
-So a bad week costs you the streak but never costs you a day of the hundred. You
-still only get one prompt per calendar day — no bingeing to catch up.
+**Missed days stay open.** If you skip day 8, your streak dies — that's the point of a
+streak. But day 8's prompt is still there, and you can go back and draw it whenever.
+Finishing it does *not* resurrect the streak, because you genuinely didn't draw that
+day; the completion is recorded against the day you actually drew it.
 
-**Nothing is readable ahead of time.** A prompt is revealed when it becomes today's
-prompt, and the moment you mark it done the next one re-seals until tomorrow. The
-journey grid shows finished days and locked squares, never a spoiler.
+That also fixes joining late. Install on day 40 and days 1–39 are all sitting there
+waiting, so you still get the beginner ramp instead of being dropped into
+`Country Road` on your first evening.
+
+**Nothing ahead is readable.** Days the calendar hasn't reached are locked and don't
+even carry their prompt text in memory. The grid shows finished sketches, open days,
+and padlocks — never a spoiler.
+
+### Sharing
+
+Hand the APK to a friend and you're on the same prompt every day automatically.
+Streaks and completion counts stay personal to each phone; only the prompt schedule is
+shared. Change `startDate` and you fork the schedule for everyone on that build.
 
 ## What's in it
 
@@ -49,8 +67,14 @@ never requests the `CAMERA` permission.
 
 **Gemini Nano** (`genai-prompt`, ML Kit Prompt API) generates an optional one-line
 drawing tip. This is a garnish, never a dependency: the API is beta, Gemini Nano is
-absent on plenty of hardware, and every failure path resolves quietly to "no tip". It
-is off the critical path of marking a day done, and it can be switched off entirely.
+absent on plenty of hardware, and AICore will happily sit on a model download
+indefinitely. Every stage is therefore bounded by a timeout, the UI says whether it is
+*downloading the model* or *running inference* rather than showing an unqualified
+spinner, and every failure resolves to "no tip". It is off the critical path of
+marking a day done, and it can be switched off entirely.
+
+The base model lives in AICore and is shared system-wide, so this app does not pull
+down its own copy of Gemini Nano.
 
 Prompt packs are hand-curated on purpose. A generated list would undermine the
 difficulty ramp, which is the one thing a 100-day journey actually needs.
@@ -103,7 +127,7 @@ ui/         Compose screens, one package per screen
 ```
 
 `domain/` has no Android dependencies, which is why the rules that matter — streak
-maths and the reveal logic — are covered by fast JVM tests.
+maths, the reveal logic, and back-filling — are covered by fast JVM tests.
 
 ## Building
 
@@ -113,6 +137,14 @@ maths and the reveal logic — are covered by fast JVM tests.
 
 ```bash
 ./gradlew testDebugUnitTest
+```
+
+Photo storage is covered by instrumented tests, because the bug they guard against
+lived in `BitmapFactory`'s bounds-decoding contract, which JVM stubs don't reproduce.
+These need a connected device or emulator:
+
+```bash
+./gradlew connectedDebugAndroidTest
 ```
 
 Or open the project in Android Studio and run it.
@@ -125,5 +157,6 @@ Or open the project in Android Studio and run it.
 - Days 31–70 — structure, perspective, texture, animals
 - Days 71–100 — scenes, interiors, faces
 
-They live in `app/src/main/assets/prompts.json`. Editing that file will not rewrite
-your history: each finished day snapshots the prompt text it was drawn from.
+They live in `app/src/main/assets/prompts.json`, alongside the `startDate` that anchors
+day 1 to the calendar. Editing the prompts will not rewrite your history: each
+finished day snapshots the prompt text it was drawn from.
