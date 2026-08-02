@@ -9,9 +9,8 @@ kills the habit. It says *"here's today's sketch"* and gets out of the way.
 ## How the journey works
 
 The day number comes from the **calendar**, not from your personal progress. Day N is
-the Nth day after the pack's `startDate`, which is baked into `prompts.json`. So
-everyone running the same build sees the same prompt on the same date — with no
-server, no accounts, and no sync. Just arithmetic on a date.
+the Nth day after *your* day 1 — recorded the first time the app runs, so whenever you
+start you start at `Apple`. Just arithmetic on a date: no server, no account, no sync.
 
 Three ideas that look similar are deliberately kept apart:
 
@@ -34,11 +33,23 @@ waiting, so you still get the beginner ramp instead of being dropped into
 even carry their prompt text in memory. The grid shows finished sketches, open days,
 and padlocks — never a spoiler.
 
-### Sharing
+### Starting, and sharing
 
-Hand the APK to a friend and you're on the same prompt every day automatically.
-Streaks and completion counts stay personal to each phone; only the prompt schedule is
-shared. Change `startDate` and you fork the schedule for everyone on that build.
+Day 1 is the day you first open the app, stored per install. That is a deliberate
+choice with a real cost, and it is worth being explicit about which way it cuts:
+
+- **Someone installing on any random day still begins at `Apple`.** They get the
+  beginner ramp instead of being dropped into `Country Road` on their first evening.
+- **Two people who start on different days are on different prompts.** The *order* is
+  shared; the schedule is not. Install together and you stay in step; install a month
+  apart and you never will.
+
+An earlier version anchored everyone to a fixed `startDate` in `prompts.json` so any
+two installs matched by date. That is still the fallback if no personal date has been
+recorded, but a late installer losing the whole beginner ramp was the worse trade.
+
+**Resetting re-anchors day 1 to today**, which is what makes it a genuine restart
+rather than a wipe that leaves you stranded on day 40 with 39 days to catch up.
 
 ## What's in it
 

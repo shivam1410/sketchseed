@@ -11,6 +11,7 @@ import com.shivam.sketchseed.data.PromptRepository
 import com.shivam.sketchseed.data.SettingsRepository
 import com.shivam.sketchseed.data.appDataStore
 import java.time.LocalDate
+import kotlinx.coroutines.flow.first
 
 /**
  * Hand-rolled dependency container.
@@ -40,4 +41,20 @@ class AppContainer(context: Context) {
 
     /** Indirection so tests can pin "today" instead of reading the system clock. */
     val today: () -> LocalDate = LocalDate::now
+
+    /**
+     * Anchors day 1 to the day this install first ran.
+     *
+     * Without this, someone installing months after the pack's own start date
+     * would open the app on day 60 and never see the beginner ramp at all.
+     *
+     * Only ever writes when nothing has been drawn yet. An install already part
+     * way through a journey keeps whatever date its day numbers were counted
+     * from, since moving that would renumber history underneath the user.
+     */
+    suspend fun anchorStartDateOnFirstRun() {
+        if (settingsRepository.settings.first().startDateOverrideEpochDay != null) return
+        if (journeyRepository.records.first().isNotEmpty()) return
+        settingsRepository.setStartDateOverride(today())
+    }
 }

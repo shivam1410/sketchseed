@@ -60,13 +60,14 @@ class JourneyViewModel(container: AppContainer) : ViewModel() {
         container.journeyRepository.records,
         pack,
         today,
-    ) { records, loadedPack, now ->
+        container.settingsRepository.settings,
+    ) { records, loadedPack, now, settings ->
         if (loadedPack == null) return@combine JourneyUiState()
 
         val progress = JourneyProgress.from(
             records = records,
             totalDays = loadedPack.totalDays,
-            startDate = loadedPack.startDate,
+            startDate = settings.startDate(loadedPack.startDate),
             today = now,
         )
         val byDay = records.associateBy { it.day }

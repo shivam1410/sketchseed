@@ -19,6 +19,7 @@ class SketchSeedApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
+        scope.launch { container.anchorStartDateOnFirstRun() }
         scheduleBackups()
     }
 

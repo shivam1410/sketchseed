@@ -85,7 +85,8 @@ class DayDetailViewModel(
         pack,
         today,
         transient,
-    ) { records, loadedPack, now, flags ->
+        container.settingsRepository.settings,
+    ) { records, loadedPack, now, flags, settings ->
         if (loadedPack == null) {
             return@combine DayDetailUiState(day = day, savingPhoto = flags.savingPhoto)
         }
@@ -93,7 +94,7 @@ class DayDetailViewModel(
         val progress = JourneyProgress.from(
             records = records,
             totalDays = loadedPack.totalDays,
-            startDate = loadedPack.startDate,
+            startDate = settings.startDate(loadedPack.startDate),
             today = now,
         )
         val record = records.firstOrNull { it.day == day }

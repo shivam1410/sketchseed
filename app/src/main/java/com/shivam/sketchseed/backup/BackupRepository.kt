@@ -8,8 +8,10 @@ import com.shivam.sketchseed.data.PhotoStore
 import com.shivam.sketchseed.data.PromptRepository
 import com.shivam.sketchseed.data.SettingsRepository
 import com.shivam.sketchseed.domain.model.DayRecord
+import com.shivam.sketchseed.domain.model.PromptPack
 import java.io.File
 import java.time.Instant
+import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -56,7 +58,7 @@ class BackupRepository(
                 createdAtEpochSecond = Instant.now().epochSecond,
                 appVersion = appVersion,
                 packId = pack.packId,
-                startDateIso = pack.startDateIso,
+                startDateIso = effectiveStartDate(pack).toString(),
                 recordCount = records.size,
                 photoCount = photos.size,
             )
@@ -174,7 +176,7 @@ class BackupRepository(
                 createdAtEpochSecond = Instant.now().epochSecond,
                 appVersion = appVersion,
                 packId = pack.packId,
-                startDateIso = pack.startDateIso,
+                startDateIso = effectiveStartDate(pack).toString(),
                 recordCount = records.size,
                 photoCount = photos.size,
             )
@@ -224,6 +226,10 @@ class BackupRepository(
      * Extras carry their own photos, so gathering only [DayRecord.photoFileName]
      * would quietly leave bonus sketches out of every backup.
      */
+    /** This install's day 1, which is what the records were numbered against. */
+    private suspend fun effectiveStartDate(pack: PromptPack): LocalDate =
+        settingsRepository.settings.first().startDate(pack.startDate)
+
     private fun photoNamesOf(record: DayRecord): List<String> =
         listOfNotNull(record.photoFileName) + record.extras.mapNotNull { it.photoFileName }
 
@@ -242,6 +248,13 @@ class BackupRepository(
                 if (photoStore.adopt(file, name)) add(name) else Log.e(TAG, "Could not restore $name")
             }
         }
+
+        // Day numbers are counted from the start date, so restoring records
+        // without it would renumber the whole journey against this install's
+        // own day 1 — a backup of day 40 could reappear as day 3.
+        runCatching { LocalDate.parse(contents.manifest.startDateIso) }
+            .onSuccess { settingsRepository.setStartDateOverride(it) }
+            .onFailure { Log.w(TAG, "Backup had no usable start date; keeping this install's", it) }
 
         // Nothing may point at a sketch that is not on disk, so drop references
         // the archive did not carry or that failed to copy — extras included.

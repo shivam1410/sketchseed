@@ -210,12 +210,20 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
 
     // ── Journey ──────────────────────────────────────────────────────────────
 
+    /**
+     * Wipes the journey and starts again at day 1 today.
+     *
+     * Re-anchoring the start date is what makes this a genuine restart. Without
+     * it the records would clear but the calendar would not, leaving someone who
+     * reset on day 40 staring at day 40 with 39 days to catch up.
+     */
     fun resetJourney() {
         viewModelScope.launch {
             busy.value = true
             try {
                 container.journeyRepository.reset()
                 container.photoStore.clear()
+                container.settingsRepository.setStartDateOverride(container.today())
                 usage.value = container.photoStore.usage()
             } finally {
                 busy.value = false

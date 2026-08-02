@@ -144,7 +144,7 @@
 
     <string name="settings_danger_header">Journey</string>
     <string name="settings_reset_title">Reset the journey</string>
-    <string name="settings_reset_summary">Clears every completion, the streak, and all sketch photos. This cannot be undone.</string>
+    <string name="settings_reset_summary">Clears every completion, the streak, and all sketch photos, and starts the hundred again from today. This cannot be undone.</string>
     <string name="settings_reset_confirm_title">Reset everything?</string>
     <plurals name="settings_reset_confirm_body">
         <item quantity="one">Your %1$d completed day and its photo will be permanently deleted. You will start again at Day 1.</item>

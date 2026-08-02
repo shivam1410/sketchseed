@@ -142,7 +142,7 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
         val progress = JourneyProgress.from(
             records = records,
             totalDays = loadedPack.totalDays,
-            startDate = loadedPack.startDate,
+            startDate = settings.startDate(loadedPack.startDate),
             today = today,
         )
 
