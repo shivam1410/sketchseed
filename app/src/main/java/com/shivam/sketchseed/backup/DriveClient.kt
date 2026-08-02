@@ -4,6 +4,7 @@ import android.util.Log
 import com.shivam.sketchseed.data.appJson
 import java.io.File
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -17,6 +18,20 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
+
+/**
+ * Timeouts are set explicitly because OkHttp's read and write defaults are ten
+ * seconds, which a sketch upload on a weak mobile connection can exceed. The
+ * call timeout is the real backstop: it bounds the whole exchange so a stalled
+ * request cannot leave the UI spinning forever.
+ */
+private fun defaultHttpClient(): OkHttpClient = OkHttpClient.Builder()
+    .connectTimeout(15, TimeUnit.SECONDS)
+    .readTimeout(30, TimeUnit.SECONDS)
+    .writeTimeout(60, TimeUnit.SECONDS)
+    .callTimeout(2, TimeUnit.MINUTES)
+    .retryOnConnectionFailure(true)
+    .build()
 
 /** A file as Drive reports it. */
 @Serializable
@@ -58,7 +73,7 @@ class DriveException(
  * else in the user's Drive even accidentally.
  */
 class DriveClient(
-    private val http: OkHttpClient = OkHttpClient(),
+    private val http: OkHttpClient = defaultHttpClient(),
     private val json: Json = appJson,
 ) {
 
@@ -112,6 +127,19 @@ class DriveClient(
         }
     }
 
+    /** Renames [fileId], used to rotate the current backup into the previous slot. */
+    suspend fun rename(token: String, fileId: String, newName: String): DriveFile {
+        val request = Request.Builder()
+            .url("$API/files/$fileId?fields=$FILE_FIELDS")
+            .authorized(token)
+            .patch(buildJsonObject("name" to newName).toRequestBody(JSON_MIME))
+            .build()
+
+        return http.run(request) { response ->
+            json.decodeFromString(DriveFile.serializer(), response.bodyText())
+        }
+    }
+
     /** Streams [fileId] into [destination]. */
     suspend fun download(token: String, fileId: String, destination: File) {
         val request = Request.Builder()
@@ -155,25 +183,53 @@ class DriveClient(
     private fun Request.Builder.authorized(token: String) =
         header("Authorization", "Bearer $token")
 
+    /**
+     * Executes [request], retrying once on a transport failure.
+     *
+     * The retry is not belt-and-braces. HTTP/2 connections to Google are pooled
+     * and the server closes them when idle; the first call after a gap can pick
+     * up a socket the server has already dropped and fail before a response
+     * arrives. That is exactly the "failed once, worked when I tapped again"
+     * shape, so the client does the second tap itself.
+     *
+     * Retrying is safe because every call here is effectively idempotent: reads
+     * are GETs, and an upload replaces the single backup by name rather than
+     * appending, so a duplicate write cannot produce a duplicate backup.
+     */
     private suspend fun <T> OkHttpClient.run(
         request: Request,
         onSuccess: (Response) -> T,
     ): T = withContext(Dispatchers.IO) {
-        try {
-            newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    val detail = response.body?.string().orEmpty().take(MAX_ERROR_CHARS)
-                    Log.e(TAG, "Drive ${request.method} ${request.url.encodedPath} -> ${response.code}: $detail")
-                    throw DriveException(
-                        message = describe(response.code),
-                        code = response.code,
-                    )
+        var lastFailure: IOException? = null
+
+        repeat(MAX_ATTEMPTS) { attempt ->
+            try {
+                return@withContext newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        val detail = response.body?.string().orEmpty().take(MAX_ERROR_CHARS)
+                        Log.e(
+                            TAG,
+                            "Drive ${request.method} ${request.url.encodedPath} " +
+                                "-> ${response.code}: $detail",
+                        )
+                        throw DriveException(describe(response.code), response.code)
+                    }
+                    onSuccess(response)
                 }
-                onSuccess(response)
+            } catch (e: IOException) {
+                lastFailure = e
+                Log.w(
+                    TAG,
+                    "Drive ${request.method} ${request.url.encodedPath} " +
+                        "attempt ${attempt + 1} failed: ${e.javaClass.simpleName}: ${e.message}",
+                )
             }
-        } catch (e: IOException) {
-            throw DriveException("Could not reach Google Drive. Check your connection.", cause = e)
         }
+
+        throw DriveException(
+            "Could not reach Google Drive. Check your connection.",
+            cause = lastFailure,
+        )
     }
 
     private fun Response.bodyText(): String =
@@ -206,6 +262,7 @@ class DriveClient(
 
     private companion object {
         const val TAG = "DriveClient"
+        const val MAX_ATTEMPTS = 2
         const val API = "https://www.googleapis.com/drive/v3"
         const val UPLOAD = "https://www.googleapis.com/upload/drive/v3"
 

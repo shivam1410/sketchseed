@@ -21,8 +21,11 @@ data class DayRecord(
     val completedOnEpochDay: Long,
     val photoFileName: String? = null,
     val tip: String? = null,
-    /** The focus line shown on the day, snapshotted alongside the prompt. */
-    val focus: String? = null,
+    /**
+     * Bonus sketches drawn the same day. Never counted toward the hundred; see
+     * [ExtraSketch].
+     */
+    val extras: List<ExtraSketch> = emptyList(),
 ) {
     val completedOn: LocalDate get() = LocalDate.ofEpochDay(completedOnEpochDay)
 
@@ -39,7 +42,6 @@ data class DayRecord(
             completedOnEpochDay = completedOn.toEpochDay(),
             photoFileName = photoFileName,
             tip = tip,
-            focus = prompt.focus.takeIf { it.isNotBlank() },
         )
     }
 }

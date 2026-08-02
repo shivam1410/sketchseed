@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.shivam.sketchseed.domain.model.DayRecord
+import com.shivam.sketchseed.domain.model.ExtraSketch
 import com.shivam.sketchseed.domain.model.Prompt
 import java.io.IOException
 import java.time.LocalDate
@@ -63,6 +64,26 @@ class JourneyRepository(
     /** Caches a generated tip so it is not regenerated every time the day is opened. */
     suspend fun setTip(day: Int, tip: String?) = mutate { current ->
         current.map { if (it.day == day) it.copy(tip = tip) else it }
+    }
+
+    /**
+     * Adds a bonus sketch to an already-finished day.
+     *
+     * A no-op on a day that is not finished: extras hang off a completed day
+     * rather than standing in for one.
+     */
+    suspend fun addExtra(day: Int, extra: ExtraSketch) = mutate { current ->
+        current.map { if (it.day == day) it.copy(extras = it.extras + extra) else it }
+    }
+
+    suspend fun removeExtra(day: Int, extraId: String) = mutate { current ->
+        current.map {
+            if (it.day == day) {
+                it.copy(extras = it.extras.filterNot { extra -> extra.id == extraId })
+            } else {
+                it
+            }
+        }
     }
 
     /**

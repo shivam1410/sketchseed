@@ -111,6 +111,22 @@ class PhotoStore(private val context: Context) {
         PhotoUsage(fileCount = files.size, totalBytes = files.sumOf { it.length() })
     }
 
+    /**
+     * Deletes every stored sketch except those in [keep].
+     *
+     * Restore uses this instead of [clear] so the new sketches are already on
+     * disk before anything is removed. Clearing first would mean a failure
+     * halfway through left the user with neither copy.
+     */
+    suspend fun retainOnly(keep: Set<String>) = withContext(Dispatchers.IO) {
+        listOf(sketchesDir, legacyDir).forEach { dir ->
+            dir.listFiles()?.forEach { file ->
+                if (file.isFile && file.name !in keep) file.delete()
+            }
+        }
+        Unit
+    }
+
     suspend fun clear() = withContext(Dispatchers.IO) {
         sketchesDir.deleteRecursively()
         legacyDir.deleteRecursively()

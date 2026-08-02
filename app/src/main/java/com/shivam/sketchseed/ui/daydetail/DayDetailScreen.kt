@@ -66,7 +66,6 @@ import com.shivam.sketchseed.R
 import com.shivam.sketchseed.domain.model.DayRecord
 import com.shivam.sketchseed.domain.model.Difficulty
 import com.shivam.sketchseed.ui.components.DifficultyChip
-import com.shivam.sketchseed.ui.components.FocusLine
 import com.shivam.sketchseed.ui.capture.rememberSketchCaptureSheet
 import com.shivam.sketchseed.ui.search.ReferenceSearch
 import com.shivam.sketchseed.ui.theme.OverlineStyle
@@ -95,6 +94,12 @@ fun DayDetailScreen(
 
     val addPhoto = rememberSketchCaptureSheet(
         onCaptured = viewModel::onSketchCaptured,
+        onFailed = { scope.launch { snackbarHostState.showSnackbar(captureFailedMessage) } },
+    )
+
+    val draft by viewModel.extraDraft.collectAsStateWithLifecycle()
+    val addExtraPhoto = rememberSketchCaptureSheet(
+        onCaptured = viewModel::onExtraPhotoCaptured,
         onFailed = { scope.launch { snackbarHostState.showSnackbar(captureFailedMessage) } },
     )
 
@@ -146,18 +151,28 @@ fun DayDetailScreen(
                     )
                 }
 
-                record != null -> CompletedDay(
-                    record = record,
-                    photo = record.photoFileName?.let(resolvePhoto),
-                    savingPhoto = state.savingPhoto,
-                    onAddPhoto = addPhoto,
-                    onRemovePhoto = viewModel::removePhoto,
-                )
+                record != null -> {
+                    CompletedDay(
+                        record = record,
+                        photo = record.photoFileName?.let(resolvePhoto),
+                        savingPhoto = state.savingPhoto,
+                        onAddPhoto = addPhoto,
+                        onRemovePhoto = viewModel::removePhoto,
+                    )
+
+                    Spacer(Modifier.height(32.dp))
+
+                    ExtraSketchesSection(
+                        extras = record.extras,
+                        resolvePhoto = resolvePhoto,
+                        onAdd = viewModel::startExtra,
+                        onRemove = viewModel::removeExtra,
+                    )
+                }
 
                 prompt != null -> OpenDay(
                     promptText = prompt.text,
                     difficulty = prompt.difficulty,
-                    focus = prompt.focus,
                     isBackfill = state.isBackfill,
                     savingPhoto = state.savingPhoto,
                     onFindReferences = { searchFor = prompt.text },
@@ -168,6 +183,17 @@ fun DayDetailScreen(
 
             Spacer(Modifier.height(40.dp))
         }
+    }
+
+    draft?.let { open ->
+        ExtraComposer(
+            draft = open,
+            photo = open.photoFileName?.let(resolvePhoto),
+            onTitleChange = viewModel::setExtraTitle,
+            onAddPhoto = addExtraPhoto,
+            onSave = viewModel::saveExtra,
+            onCancel = viewModel::cancelExtra,
+        )
     }
 
     searchFor?.let { promptText ->
@@ -217,7 +243,6 @@ fun DayDetailScreen(
 private fun OpenDay(
     promptText: String,
     difficulty: Difficulty,
-    focus: String,
     isBackfill: Boolean,
     savingPhoto: Boolean,
     onFindReferences: () -> Unit,
@@ -234,11 +259,6 @@ private fun OpenDay(
 
     Spacer(Modifier.height(12.dp))
     DifficultyChip(difficulty)
-
-    if (focus.isNotBlank()) {
-        Spacer(Modifier.height(16.dp))
-        FocusLine(focus)
-    }
 
     if (isBackfill) {
         Spacer(Modifier.height(20.dp))
@@ -315,11 +335,6 @@ private fun CompletedDay(
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-
-    record.focus?.takeIf { it.isNotBlank() }?.let {
-        Spacer(Modifier.height(16.dp))
-        FocusLine(it)
-    }
 
     Spacer(Modifier.height(24.dp))
 

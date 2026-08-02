@@ -42,8 +42,6 @@
     <string name="capture_pick_gallery_summary">Pick a photo you already took</string>
     <string name="capture_failed">Couldn\'t open the camera on this device.</string>
 
-    <!-- Prompt focus -->
-    <string name="focus_label">Focus</string>
 
     <!-- Reference search -->
     <string name="search_sheet_title">Reference images for “%1$s”</string>
@@ -84,6 +82,23 @@
     <string name="day_detail_locked">This prompt is still sealed. Come back on its day.</string>
     <string name="day_detail_backfill_hint">You missed this one. You can still draw it to complete the hundred, though it won\'t bring back the streak.</string>
     <string name="delete_photo">Remove photo</string>
+
+    <!-- Extra sketches: bonus drawings on an already-finished day -->
+    <string name="extras_header">Also drawn today</string>
+    <string name="extras_empty">Finished early? Anything else you draw today can live here. It won\'t change your streak or the hundred.</string>
+    <plurals name="extras_count">
+        <item quantity="one">%1$d extra sketch</item>
+        <item quantity="other">%1$d extra sketches</item>
+    </plurals>
+    <string name="extras_add">Add another sketch</string>
+    <string name="extras_add_photo">Add a photo</string>
+    <string name="extras_composer_title">Another sketch</string>
+    <string name="extras_title_label">What did you draw?</string>
+    <string name="extras_save">Save</string>
+    <string name="extras_remove">Remove this sketch</string>
+    <string name="extras_untitled">Untitled</string>
+    <string name="extras_badge">%1$d more</string>
+    <string name="done_today_extras">Drawn something else today?</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>

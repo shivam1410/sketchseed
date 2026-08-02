@@ -7,6 +7,7 @@ import com.shivam.sketchseed.data.JourneyRepository
 import com.shivam.sketchseed.data.PhotoStore
 import com.shivam.sketchseed.data.PromptRepository
 import com.shivam.sketchseed.data.SettingsRepository
+import com.shivam.sketchseed.domain.model.DayRecord
 import java.io.File
 import java.time.Instant
 import kotlinx.coroutines.Dispatchers
@@ -49,7 +50,7 @@ class BackupRepository(
         try {
             val records = journeyRepository.records.first()
             val pack = promptRepository.pack()
-            val photos = records.mapNotNull { it.photoFileName?.let(photoStore::resolve) }
+            val photos = records.flatMap(::photoNamesOf).mapNotNull(photoStore::resolve)
 
             val manifest = BackupManifest(
                 createdAtEpochSecond = Instant.now().epochSecond,
@@ -62,6 +63,7 @@ class BackupRepository(
 
             staged.outputStream().use { archive.write(it, manifest, records, photos) }
 
+            rotatePrevious(token)
             val uploaded = drive.upload(token, ARCHIVE_NAME, staged)
 
             val now = Instant.now().epochSecond
@@ -94,11 +96,11 @@ class BackupRepository(
         try {
             val file = latestBackupFile(token) ?: return@withContext BackupOutcome.NoBackupFound
 
-            val contents = withDownloaded(token, file.id) { local, scratch ->
-                local.inputStream().use { archive.read(it, scratch) }
+            // Applied *inside* the block: the extracted sketches live in the
+            // scratch directory, which is deleted the moment this returns.
+            withDownloaded(token, file.id) { local, scratch ->
+                applyRestore(local.inputStream().use { archive.read(it, scratch) })
             }
-
-            applyRestore(contents)
         } catch (e: BackupFormatException) {
             BackupOutcome.Failed(e.message ?: DEFAULT_ERROR, e)
         } catch (e: DriveException) {
@@ -110,14 +112,36 @@ class BackupRepository(
         }
     }
 
+    /**
+     * Demotes the current backup before a new one replaces it.
+     *
+     * Keeping one generation back is the difference between an unlucky upload
+     * costing you a day and costing you everything. A backup that only ever
+     * holds the newest state is only as trustworthy as the state that produced
+     * it: anything that empties the journey locally would, one automatic run
+     * later, empty the backup too.
+     */
+    private suspend fun rotatePrevious(token: String) {
+        val current = drive.list(token, ARCHIVE_NAME).firstOrNull() ?: return
+        try {
+            drive.list(token, PREVIOUS_NAME).forEach { drive.delete(token, it.id) }
+            drive.rename(token, current.id, PREVIOUS_NAME)
+        } catch (e: DriveException) {
+            // Losing the older generation must not stop today's backup.
+            Log.w(TAG, "Could not rotate the previous backup", e)
+        }
+    }
+
     private suspend fun latestBackupFile(token: String): DriveFile? =
         drive.list(token, ARCHIVE_NAME).firstOrNull()
+            ?: drive.list(token, PREVIOUS_NAME).firstOrNull()
+                .also { if (it != null) Log.i(TAG, "Falling back to the previous backup") }
 
     /** Downloads to scratch space and cleans up afterwards, whatever happens. */
     private suspend fun <T> withDownloaded(
         token: String,
         fileId: String,
-        block: (local: File, scratch: File) -> T,
+        block: suspend (local: File, scratch: File) -> T,
     ): T {
         val local = File(context.cacheDir, "restore-$ARCHIVE_NAME")
         val scratch = File(context.cacheDir, "restore-sketches")
@@ -144,7 +168,7 @@ class BackupRepository(
         try {
             val records = journeyRepository.records.first()
             val pack = promptRepository.pack()
-            val photos = records.mapNotNull { it.photoFileName?.let(photoStore::resolve) }
+            val photos = records.flatMap(::photoNamesOf).mapNotNull(photoStore::resolve)
 
             val manifest = BackupManifest(
                 createdAtEpochSecond = Instant.now().epochSecond,
@@ -200,32 +224,48 @@ class BackupRepository(
      * Shared by Drive restore and file import so the two can never drift apart
      * in how they treat photos or dangling references.
      */
+    /**
+     * Every sketch file a day owns.
+     *
+     * Extras carry their own photos, so gathering only [DayRecord.photoFileName]
+     * would quietly leave bonus sketches out of every backup.
+     */
+    private fun photoNamesOf(record: DayRecord): List<String> =
+        listOfNotNull(record.photoFileName) + record.extras.mapNotNull { it.photoFileName }
+
     private suspend fun applyRestore(contents: BackupContents): BackupOutcome {
-        photoStore.clear()
-        var restoredPhotos = 0
-        contents.photos.forEach { (name, file) ->
-            if (photoStore.adopt(file, name)) restoredPhotos++
+        // Adopt before deleting anything. If this is interrupted the user is
+        // left with both copies rather than neither, which is the only failure
+        // mode worth optimising for in a restore.
+        val adopted = buildSet {
+            contents.photos.forEach { (name, file) ->
+                if (photoStore.adopt(file, name)) add(name) else Log.e(TAG, "Could not restore $name")
+            }
         }
 
-        // Drop photo references the archive did not actually carry, rather than
-        // leaving records pointing at files that are not there.
+        // Nothing may point at a sketch that is not on disk, so drop references
+        // the archive did not carry or that failed to copy — extras included.
         val records = contents.records.map { record ->
-            val name = record.photoFileName
-            if (name != null && !contents.photos.containsKey(name)) {
-                record.copy(photoFileName = null)
-            } else {
-                record
-            }
+            record.copy(
+                photoFileName = record.photoFileName?.takeIf { it in adopted },
+                extras = record.extras.map { extra ->
+                    extra.copy(photoFileName = extra.photoFileName?.takeIf { it in adopted })
+                },
+            )
         }
         journeyRepository.replaceAll(records)
 
-        Log.i(TAG, "Restored ${records.size} days and $restoredPhotos sketches")
-        return BackupOutcome.Restored(records = records.size, photos = restoredPhotos)
+        // Only now remove what the restored journey no longer refers to.
+        photoStore.retainOnly(adopted)
+
+        Log.i(TAG, "Restored ${records.size} days and ${adopted.size} sketches")
+        return BackupOutcome.Restored(records = records.size, photos = adopted.size)
     }
 
     private companion object {
         const val TAG = "BackupRepository"
         const val ARCHIVE_NAME = "sketchseed-backup.zip"
+        const val PREVIOUS_NAME = "sketchseed-backup-previous.zip"
         const val DEFAULT_ERROR = "Something went wrong talking to Google Drive."
         const val CANNOT_WRITE = "Could not write the backup file."
         const val CANNOT_READ = "That file could not be read as a SketchSeed backup."

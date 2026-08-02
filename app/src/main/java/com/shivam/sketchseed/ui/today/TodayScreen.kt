@@ -68,7 +68,6 @@ import com.shivam.sketchseed.domain.model.DayRecord
 import com.shivam.sketchseed.domain.model.JourneyProgress
 import com.shivam.sketchseed.domain.model.Prompt
 import com.shivam.sketchseed.ui.components.DifficultyChip
-import com.shivam.sketchseed.ui.components.FocusLine
 import com.shivam.sketchseed.ui.capture.rememberSketchCaptureSheet
 import com.shivam.sketchseed.ui.search.ReferenceSearch
 import com.shivam.sketchseed.ui.theme.OverlineStyle
@@ -322,12 +321,6 @@ private fun DrawBlock(
 
     Spacer(Modifier.height(16.dp))
     DifficultyChip(prompt.difficulty)
-
-    if (prompt.focus.isNotBlank()) {
-        Spacer(Modifier.height(20.dp))
-        FocusLine(prompt.focus)
-    }
-
     Spacer(Modifier.height(24.dp))
 
     TipSection(tip = tip, onRequestTip = onRequestTip, onDismissTip = onDismissTip)
@@ -526,6 +519,24 @@ private fun RestBlock(
         labelId = if (photo == null) R.string.add_sketch_photo else R.string.retake_sketch_photo,
         onClick = onAddPhoto,
     )
+
+    Spacer(Modifier.height(20.dp))
+
+    // Somewhere for spare appetite to go on a day that took two minutes,
+    // without letting it eat into tomorrow's prompt.
+    TextButton(onClick = onOpenDay) {
+        Text(
+            text = if (finished.extras.isEmpty()) {
+                stringResource(R.string.done_today_extras)
+            } else {
+                pluralStringResource(
+                    R.plurals.extras_count,
+                    finished.extras.size,
+                    finished.extras.size,
+                )
+            },
+        )
+    }
 }
 
 @Composable

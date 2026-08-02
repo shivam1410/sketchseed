@@ -67,35 +67,6 @@ fun StatPill(
     }
 }
 
-/**
- * The day's focus: what to actually practise.
- *
- * Set quietly beneath the prompt on purpose. The subject is the headline; this
- * is the coaching, and it should read as an aside rather than an instruction
- * the user can fail at.
- */
-@Composable
-fun FocusLine(text: String, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.focus_label).uppercase(),
-            style = OverlineStyle,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-        )
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            fontStyle = FontStyle.Italic,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-    }
-}
-
 @Composable
 fun SectionHeader(text: String, modifier: Modifier = Modifier) {
     Text(

@@ -2,6 +2,7 @@ package com.shivam.sketchseed.domain
 
 import com.shivam.sketchseed.domain.model.DayRecord
 import com.shivam.sketchseed.domain.model.Difficulty
+import com.shivam.sketchseed.domain.model.ExtraSketch
 import com.shivam.sketchseed.domain.model.JourneyProgress
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
@@ -188,6 +189,55 @@ class JourneyProgressTest {
 
         assertEquals("Prompt 1", p.recordFor(1)?.promptText)
         assertNull(p.recordFor(2))
+    }
+
+    // ── Extras are inert ─────────────────────────────────────────────────────
+    //
+    // A day can hold any number of bonus sketches. None of them may buy progress
+    // through the hundred, or the whole point of one-a-day collapses.
+
+    private fun extra(n: Int) = ExtraSketch(
+        id = "extra-$n",
+        title = "Bonus $n",
+        photoFileName = "extra-$n.jpg",
+        createdOnEpochDay = dateOfDay(n).toEpochDay(),
+    )
+
+    @Test
+    fun `piling extras onto a day still counts as one day`() {
+        val loaded = record(1).copy(extras = List(8) { extra(it) })
+        val p = progressOn(2, listOf(loaded))
+
+        assertEquals(1, p.completedCount)
+        assertEquals(1, p.percentComplete)
+        assertEquals(2, p.currentDay)
+    }
+
+    @Test
+    fun `extras do not unlock the next day`() {
+        val loaded = record(5).copy(extras = List(3) { extra(it) })
+        val p = progressOn(5, listOf(loaded))
+
+        assertFalse("day 5 is done, so nothing is drawable today", p.canDrawToday)
+        assertFalse("day 6 must stay sealed", p.isRevealed(6))
+    }
+
+    @Test
+    fun `extras do not extend the streak`() {
+        // Drew day 1 only, then piled on extras. Two calendar days have passed.
+        val loaded = record(1).copy(extras = List(5) { extra(it) })
+        val p = progressOn(3, listOf(loaded))
+
+        assertEquals(0, p.currentStreak)
+        assertEquals(1, p.bestStreak)
+    }
+
+    @Test
+    fun `a day with extras is not treated as missed`() {
+        val p = progressOn(3, listOf(record(1).copy(extras = listOf(extra(1))), record(2)))
+
+        assertTrue(p.missedDays.isEmpty())
+        assertEquals(2, p.completedCount)
     }
 
     // ── Window edges ─────────────────────────────────────────────────────────

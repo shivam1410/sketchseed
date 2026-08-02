@@ -227,6 +227,12 @@ private fun DayTile(
                     caption = cell.record.promptText,
                     onImage = photo != null,
                 )
+                if (cell.record.extras.isNotEmpty()) {
+                    ExtrasBadge(
+                        count = cell.record.extras.size,
+                        modifier = Modifier.align(Alignment.TopEnd).padding(4.dp),
+                    )
+                }
             }
 
             is DayCell.Current -> DayLabel(
@@ -250,6 +256,21 @@ private fun DayTile(
             )
         }
     }
+}
+
+/** Marks a day that carries bonus sketches beyond its own prompt. */
+@Composable
+private fun ExtrasBadge(count: Int, modifier: Modifier = Modifier) {
+    Text(
+        text = "+$count",
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onPrimary,
+        modifier = modifier
+            .clip(RoundedCornerShape(percent = 50))
+            .background(MaterialTheme.colorScheme.primary)
+            .padding(horizontal = 6.dp, vertical = 2.dp)
+            .semantics { contentDescription = "$count extra sketches" },
+    )
 }
 
 @Composable

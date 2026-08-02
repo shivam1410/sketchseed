@@ -7,17 +7,13 @@ import kotlinx.serialization.Serializable
 /**
  * A single day's drawing subject, as authored in the bundled pack.
  *
- * [text] stays short because it doubles as the image-search term. [focus] is the
- * teaching half: it names the one skill to practise and, on the harder days,
- * deliberately narrows the task — "just the front wheel" rather than the whole
- * bicycle. Defaulted so a pack without focus lines still loads.
+ * [text] stays short because it doubles as the image-search term.
  */
 @Serializable
 data class Prompt(
     val day: Int,
     val text: String,
     val difficulty: Difficulty,
-    val focus: String = "",
 )
 
 /** The bundled 100-prompt pack. */
