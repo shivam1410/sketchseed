@@ -70,6 +70,10 @@ dependencies {
     implementation(libs.mlkit.document.scanner)
     implementation(libs.mlkit.genai.prompt)
 
+    implementation(libs.play.services.auth)
+    implementation(libs.kotlinx.coroutines.play.services)
+    implementation(libs.okhttp)
+
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     testImplementation(libs.junit)

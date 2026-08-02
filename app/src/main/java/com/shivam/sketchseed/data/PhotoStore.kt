@@ -71,6 +71,28 @@ class PhotoStore(private val context: Context) {
             }
         }
 
+    /**
+     * Takes ownership of an already-decoded sketch, e.g. one extracted from a
+     * backup archive.
+     *
+     * The bytes are copied verbatim rather than re-encoded: they were already
+     * downscaled when first saved, and a second JPEG pass would visibly degrade
+     * them for no gain.
+     *
+     * @return true if the file is now stored under [fileName].
+     */
+    suspend fun adopt(source: File, fileName: String, includeInBackup: Boolean): Boolean =
+        withContext(Dispatchers.IO) {
+            val destination = File(targetDir(includeInBackup), fileName)
+            try {
+                source.copyTo(destination, overwrite = true)
+                true
+            } catch (e: IOException) {
+                Log.e(TAG, "Could not store restored sketch $fileName", e)
+                false
+            }
+        }
+
     /** Locates a stored sketch in whichever directory currently holds it. */
     fun resolve(fileName: String): File? =
         File(backedUpDir, fileName).takeIf { it.exists() }

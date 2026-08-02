@@ -65,6 +65,19 @@ class JourneyRepository(
         current.map { if (it.day == day) it.copy(tip = tip) else it }
     }
 
+    /**
+     * Swaps the whole journey for [records].
+     *
+     * Used by restore, which deliberately replaces rather than merges: a
+     * half-merged journey where some days came from the phone and some from a
+     * backup would be impossible for anyone to reason about.
+     */
+    suspend fun replaceAll(records: List<DayRecord>) {
+        dataStore.edit { prefs ->
+            prefs[KEY_RECORDS] = json.encodeToString(serializer, records.sortedBy { it.day })
+        }
+    }
+
     suspend fun reset() {
         dataStore.edit { it.remove(KEY_RECORDS) }
     }

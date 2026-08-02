@@ -1,5 +1,8 @@
 package com.shivam.sketchseed.ui.settings
 
+import android.app.PendingIntent
+import android.content.Intent
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -8,11 +11,14 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.shivam.sketchseed.AppContainer
 import com.shivam.sketchseed.SketchSeedApplication
 import com.shivam.sketchseed.ai.TipAvailability
+import com.shivam.sketchseed.backup.AuthOutcome
+import com.shivam.sketchseed.backup.BackupOutcome
 import com.shivam.sketchseed.data.PhotoUsage
 import com.shivam.sketchseed.data.Settings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -25,6 +31,7 @@ data class SettingsUiState(
     val aiAvailability: TipAvailability? = null,
     val completedCount: Int = 0,
     val busy: Boolean = false,
+    val driveBusy: Boolean = false,
 ) {
     /** Auto Backup silently drops app data past its quota, so warn before that. */
     val nearBackupQuota: Boolean
@@ -35,11 +42,25 @@ data class SettingsUiState(
     }
 }
 
+/** What to do once a Drive token is in hand. */
+private enum class DriveAction { BACK_UP, RESTORE }
+
 class SettingsViewModel(private val container: AppContainer) : ViewModel() {
 
     private val usage = MutableStateFlow(PhotoUsage())
     private val aiAvailability = MutableStateFlow<TipAvailability?>(null)
     private val busy = MutableStateFlow(false)
+    private val driveBusy = MutableStateFlow(false)
+
+    /** Set when Google needs the user to approve Drive access. */
+    private val _consentRequest = MutableStateFlow<PendingIntent?>(null)
+    val consentRequest: StateFlow<PendingIntent?> = _consentRequest.asStateFlow()
+
+    /** One-shot message describing the last Drive operation. */
+    private val _driveMessage = MutableStateFlow<String?>(null)
+    val driveMessage: StateFlow<String?> = _driveMessage.asStateFlow()
+
+    private var pendingAction: DriveAction? = null
 
     init {
         refreshUsage()
@@ -53,20 +74,23 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
         container.journeyRepository.records.map { it.size },
         usage,
         aiAvailability,
-        busy,
-    ) { settings, completed, photoUsage, availability, isBusy ->
+        combine(busy, driveBusy) { a, b -> a to b },
+    ) { settings, completed, photoUsage, availability, flags ->
         SettingsUiState(
             settings = settings,
             usage = photoUsage,
             aiAvailability = availability,
             completedCount = completed,
-            busy = isBusy,
+            busy = flags.first,
+            driveBusy = flags.second,
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
         initialValue = SettingsUiState(),
     )
+
+    // ── Auto Backup toggles ──────────────────────────────────────────────────
 
     /**
      * Auto Backup rules are static XML, so the toggle physically relocates the
@@ -89,6 +113,90 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
         viewModelScope.launch { container.settingsRepository.setAiTipsEnabled(enabled) }
     }
 
+    // ── Google Drive ─────────────────────────────────────────────────────────
+
+    fun backUpToDrive() = startDriveAction(DriveAction.BACK_UP)
+
+    fun restoreFromDrive() = startDriveAction(DriveAction.RESTORE)
+
+    private fun startDriveAction(action: DriveAction) {
+        if (driveBusy.value) return
+        pendingAction = action
+
+        viewModelScope.launch {
+            driveBusy.value = true
+            when (val outcome = container.driveAuthorizer.authorize()) {
+                is AuthOutcome.Token -> execute(action, outcome.accessToken)
+
+                // Hand the consent screen to the UI; execution resumes in
+                // onConsentResult once the user has approved.
+                is AuthOutcome.NeedsConsent -> _consentRequest.value = outcome.pendingIntent
+
+                is AuthOutcome.Failed -> {
+                    Log.w(TAG, "Drive authorization failed", outcome.cause)
+                    finishWith(SIGN_IN_FAILED)
+                }
+            }
+        }
+    }
+
+    fun onConsentResult(data: Intent?) {
+        _consentRequest.value = null
+        val action = pendingAction
+
+        viewModelScope.launch {
+            when (val outcome = container.driveAuthorizer.fromConsentResult(data)) {
+                is AuthOutcome.Token ->
+                    if (action == null) finishWith(null) else execute(action, outcome.accessToken)
+
+                else -> finishWith(SIGN_IN_CANCELLED)
+            }
+        }
+    }
+
+    fun onConsentDismissed() {
+        _consentRequest.value = null
+        finishWith(SIGN_IN_CANCELLED)
+    }
+
+    private suspend fun execute(action: DriveAction, token: String) {
+        val outcome = when (action) {
+            DriveAction.BACK_UP -> container.backupRepository.backUp(token)
+            DriveAction.RESTORE -> container.backupRepository.restoreLatest(token)
+        }
+
+        usage.value = container.photoStore.usage()
+        finishWith(describe(outcome))
+    }
+
+    private fun describe(outcome: BackupOutcome): String = when (outcome) {
+        is BackupOutcome.BackedUp -> "$BACKED_UP:${outcome.bytes}"
+        is BackupOutcome.Restored -> "$RESTORED:${outcome.records}:${outcome.photos}"
+        BackupOutcome.NoBackupFound -> NO_BACKUP
+        is BackupOutcome.NeedsSignIn -> SIGN_IN_FAILED
+        is BackupOutcome.Failed -> outcome.message
+    }
+
+    private fun finishWith(message: String?) {
+        pendingAction = null
+        driveBusy.value = false
+        _driveMessage.value = message
+    }
+
+    fun consumeDriveMessage() {
+        _driveMessage.value = null
+    }
+
+    fun disconnectDrive() {
+        viewModelScope.launch {
+            driveBusy.value = true
+            container.driveAuthorizer.signOut()
+            finishWith(null)
+        }
+    }
+
+    // ── Journey ──────────────────────────────────────────────────────────────
+
     fun resetJourney() {
         viewModelScope.launch {
             busy.value = true
@@ -107,7 +215,15 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     companion object {
+        private const val TAG = "SettingsViewModel"
         private const val STOP_TIMEOUT_MS = 5_000L
+
+        /** Sentinels the screen maps onto localised strings. */
+        const val BACKED_UP = "backed_up"
+        const val RESTORED = "restored"
+        const val NO_BACKUP = "no_backup"
+        const val SIGN_IN_FAILED = "sign_in_failed"
+        const val SIGN_IN_CANCELLED = "sign_in_cancelled"
 
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
