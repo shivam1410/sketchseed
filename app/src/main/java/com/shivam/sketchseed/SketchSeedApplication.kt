@@ -21,6 +21,25 @@ class SketchSeedApplication : Application() {
         container = AppContainer(this)
         scope.launch { container.anchorStartDateOnFirstRun() }
         scheduleBackups()
+        scheduleReminders()
+    }
+
+    /**
+     * Keeps the daily reminders queued.
+     *
+     * Re-scheduling on every launch is harmless — the work is unique per slot —
+     * and it repairs the case where WorkManager's queue was cleared by the system
+     * or an app upgrade.
+     */
+    private fun scheduleReminders() {
+        scope.launch {
+            val settings = container.settingsRepository.settings.first()
+            if (settings.remindersEnabled) {
+                container.reminders.schedule(settings)
+            } else {
+                container.reminders.cancel()
+            }
+        }
     }
 
     /**

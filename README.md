@@ -69,7 +69,7 @@ rather than a wipe that leaves you stranded on day 40 with 39 days to catch up.
   current streak, best streak, and the progress bar. Tap any finished day to revisit it.
 - **Day detail** — the full sketch, when you drew it, the tip if you asked for one, and
   anything extra you drew that day.
-- **Settings** — Drive backup, export and import, on-device AI, and reset.
+- **Settings** — reminders, Drive backup, export and import, on-device AI, and reset.
 
 ## Reference search
 
@@ -143,6 +143,33 @@ no account, no Drive scope, restorable into any build.
 > key and every Drive call fails until that certificate's SHA-1 is registered in the
 > Google Cloud project. This is why the release build is signed with the debug
 > certificate — see [Building](#building).
+
+## Reminders
+
+Three nudges a day, on by default, each at a time you set — 9am, 6pm and 10pm to
+start with. Three rather than one because a single notification is easy to swipe away
+and forget, and easy to miss entirely if it lands mid-meeting.
+
+**Drawing today silences the rest of the day.** That is decided when each reminder
+fires, not by cancelling anything when you finish, so it holds however the day played
+out — app killed, day restored from a backup, clock rolled past midnight. The worker
+asks the same question every time: is there something to draw right now?
+
+WorkManager rather than exact alarms. A drawing reminder is fine arriving a few minutes
+late, and this survives reboots and Doze without the exact-alarm permission Android now
+guards closely. Denying the notification permission costs only the reminders; Settings
+says so plainly rather than showing a toggle that looks on while nothing arrives.
+
+## On-device AI, or none at all
+
+Gemini Nano is absent on plenty of hardware. Where `TipGenerator` reports the feature
+unsupported, **the nudge button and the entire On-device AI section are hidden** rather
+than shown greyed out — a permanently disabled switch advertises something the device
+will never do and invites prodding.
+
+That answer is cached, because it is a fact about the hardware and cannot change while
+the app runs. "Model not downloaded yet" is not cached, since a download completing
+flips it.
 
 ## Extra sketches
 

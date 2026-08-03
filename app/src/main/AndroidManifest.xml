@@ -6,6 +6,10 @@
          no analytics. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Android 13+ asks the user before any notification can be posted. Denying
+         it costs only the reminders; the rest of the app is unaffected. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- CAMERA is deliberately NOT declared. Sketch photos are taken by the
          user's own camera app via ACTION_IMAGE_CAPTURE, which needs no
          permission — but only while this app declares none. Declaring CAMERA

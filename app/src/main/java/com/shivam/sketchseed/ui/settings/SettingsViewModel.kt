@@ -17,11 +17,14 @@ import com.shivam.sketchseed.backup.AutoBackupScheduler
 import com.shivam.sketchseed.backup.BackupOutcome
 import com.shivam.sketchseed.data.PhotoUsage
 import com.shivam.sketchseed.data.Settings
+import com.shivam.sketchseed.notify.ReminderSlot
+import java.time.LocalTime
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -34,6 +37,24 @@ data class SettingsUiState(
     val completedCount: Int = 0,
     val busy: Boolean = false,
     val driveBusy: Boolean = false,
+    /** False when Android has notifications switched off for the whole app. */
+    val notificationsAllowed: Boolean = true,
+) {
+    /**
+     * Whether to show the AI section at all.
+     *
+     * A permanently greyed-out switch is worse than no switch: it advertises a
+     * feature the device will never have and invites the user to keep prodding
+     * it. Null means still probing, so keep it hidden until we know.
+     */
+    val showAiSection: Boolean
+        get() = aiAvailability != null && aiAvailability != TipAvailability.UNSUPPORTED
+}
+
+private data class Flags(
+    val busy: Boolean,
+    val driveBusy: Boolean,
+    val notificationsAllowed: Boolean,
 )
 
 /** What to do once a Drive token is in hand. */
@@ -45,6 +66,7 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
     private val aiAvailability = MutableStateFlow<TipAvailability?>(null)
     private val busy = MutableStateFlow(false)
     private val driveBusy = MutableStateFlow(false)
+    private val notificationsAllowed = MutableStateFlow(true)
 
     /** Set when Google needs the user to approve Drive access. */
     private val _consentRequest = MutableStateFlow<PendingIntent?>(null)
@@ -58,6 +80,7 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
 
     init {
         refreshUsage()
+        refreshNotificationState()
         viewModelScope.launch {
             aiAvailability.value = container.tipGenerator.availability()
         }
@@ -68,15 +91,16 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
         container.journeyRepository.records.map { it.size },
         usage,
         aiAvailability,
-        combine(busy, driveBusy) { a, b -> a to b },
+        combine(busy, driveBusy, notificationsAllowed, ::Flags),
     ) { settings, completed, photoUsage, availability, flags ->
         SettingsUiState(
             settings = settings,
             usage = photoUsage,
             aiAvailability = availability,
             completedCount = completed,
-            busy = flags.first,
-            driveBusy = flags.second,
+            busy = flags.busy,
+            driveBusy = flags.driveBusy,
+            notificationsAllowed = flags.notificationsAllowed,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -99,6 +123,40 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
 
     fun setAiTipsEnabled(enabled: Boolean) {
         viewModelScope.launch { container.settingsRepository.setAiTipsEnabled(enabled) }
+    }
+
+    fun setRemindersEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            container.settingsRepository.setRemindersEnabled(enabled)
+            val settings = container.settingsRepository.settings.first()
+            if (enabled) container.reminders.schedule(settings) else container.reminders.cancel()
+            notificationsAllowed.value = container.reminders.enabledInSystemSettings
+        }
+    }
+
+    /**
+     * Moves a reminder, then re-queues everything.
+     *
+     * All three are rescheduled rather than just the one changed: the work is
+     * unique per slot so re-queueing the others is free, and it avoids a second
+     * code path that could drift from the first.
+     */
+    fun setReminderTime(slot: ReminderSlot, at: LocalTime) {
+        viewModelScope.launch {
+            when (slot) {
+                ReminderSlot.MORNING -> container.settingsRepository.setMorningReminder(at)
+                ReminderSlot.EVENING -> container.settingsRepository.setEveningReminder(at)
+                ReminderSlot.NIGHT -> container.settingsRepository.setNightReminder(at)
+            }
+            val settings = container.settingsRepository.settings.first()
+            if (settings.remindersEnabled) container.reminders.schedule(settings)
+        }
+    }
+
+    /** Re-read on resume, since the user may have changed it in system settings. */
+    fun refreshNotificationState() {
+        notificationsAllowed.value =
+            container.reminders.permitted && container.reminders.enabledInSystemSettings
     }
 
     // ── Google Drive ─────────────────────────────────────────────────────────

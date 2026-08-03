@@ -11,6 +11,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.shivam.sketchseed.AppContainer
 import com.shivam.sketchseed.R
 import com.shivam.sketchseed.SketchSeedApplication
+import com.shivam.sketchseed.ai.TipAvailability
 import com.shivam.sketchseed.ai.TipResult
 import com.shivam.sketchseed.data.Settings
 import com.shivam.sketchseed.domain.model.DayRecord
@@ -80,6 +81,8 @@ private data class Snapshot(
 private data class Transient(
     val savingPhoto: Boolean,
     @param:StringRes val errorMessage: Int?,
+    /** Null while still being probed; treated as unsupported until known. */
+    val aiSupported: Boolean?,
 )
 
 class TodayViewModel(private val container: AppContainer) : ViewModel() {
@@ -89,6 +92,7 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
     private val tip = MutableStateFlow<TipState>(TipState.Idle)
     private val savingPhoto = MutableStateFlow(false)
     private val errorMessage = MutableStateFlow<Int?>(null)
+    private val aiSupported = MutableStateFlow<Boolean?>(null)
 
     /**
      * Bonus sketches for the day just finished.
@@ -114,9 +118,16 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
                 Log.e(TAG, "Prompt pack could not be loaded", e)
             }
         }
+
+        // Hardware that cannot run Gemini Nano should never be offered a
+        // nudge button, so the whole affordance waits on this answer.
+        viewModelScope.launch {
+            aiSupported.value =
+                container.tipGenerator.availability() != TipAvailability.UNSUPPORTED
+        }
     }
 
-    private val transient = combine(savingPhoto, errorMessage, ::Transient)
+    private val transient = combine(savingPhoto, errorMessage, aiSupported, ::Transient)
 
     val uiState: StateFlow<TodayUiState> = combine(
         container.journeyRepository.records,
@@ -166,7 +177,15 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
             mode = mode,
             progress = progress,
             // A tip only makes sense while there is something left to draw.
-            tip = if (mode is TodayMode.Draw && settings.aiTipsEnabled) tip else TipState.Hidden,
+            tip = if (
+                mode is TodayMode.Draw &&
+                settings.aiTipsEnabled &&
+                extras.aiSupported == true
+            ) {
+                tip
+            } else {
+                TipState.Hidden
+            },
             savingPhoto = extras.savingPhoto,
             missedCount = progress.missedDays.size,
             errorMessage = extras.errorMessage,

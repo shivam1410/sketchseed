@@ -10,6 +10,7 @@ import com.shivam.sketchseed.data.PhotoStore
 import com.shivam.sketchseed.data.PromptRepository
 import com.shivam.sketchseed.data.SettingsRepository
 import com.shivam.sketchseed.data.appDataStore
+import com.shivam.sketchseed.notify.SketchReminders
 import java.time.LocalDate
 import kotlinx.coroutines.flow.first
 
@@ -27,6 +28,7 @@ class AppContainer(context: Context) {
     val settingsRepository = SettingsRepository(appContext.appDataStore)
     val photoStore = PhotoStore(appContext)
     val tipGenerator = TipGenerator()
+    val reminders = SketchReminders(appContext)
 
     val driveAuthorizer = DriveAuthorizer(appContext)
     val backupRepository = BackupRepository(

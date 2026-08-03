@@ -46,11 +46,29 @@ sealed interface TipResult {
  */
 class TipGenerator {
 
-    suspend fun availability(): TipAvailability = withModel { model ->
-        withTimeoutOrNull(STATUS_TIMEOUT_MS) { model.statusOrNull() }
-            ?.toAvailability()
-            ?: TipAvailability.UNSUPPORTED
-    } ?: TipAvailability.UNSUPPORTED
+    /**
+     * Remembered only when the answer is [TipAvailability.UNSUPPORTED].
+     *
+     * That one is a fact about the hardware and build, so it cannot change while
+     * the app runs and re-probing it costs an IPC round trip on every screen.
+     * READY and NEEDS_DOWNLOAD are transient — a download finishing flips one
+     * into the other — so those are always asked afresh.
+     */
+    @Volatile
+    private var knownUnsupported = false
+
+    suspend fun availability(): TipAvailability {
+        if (knownUnsupported) return TipAvailability.UNSUPPORTED
+
+        val result = withModel { model ->
+            withTimeoutOrNull(STATUS_TIMEOUT_MS) { model.statusOrNull() }
+                ?.toAvailability()
+                ?: TipAvailability.UNSUPPORTED
+        } ?: TipAvailability.UNSUPPORTED
+
+        if (result == TipAvailability.UNSUPPORTED) knownUnsupported = true
+        return result
+    }
 
     /**
      * Produces a short tip for [promptText], fetching the model first if the

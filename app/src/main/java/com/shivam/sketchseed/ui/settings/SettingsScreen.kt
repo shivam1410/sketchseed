@@ -1,8 +1,14 @@
 package com.shivam.sketchseed.ui.settings
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.provider.Settings as AndroidSettings
+import android.text.format.DateFormat
 import android.text.format.DateUtils
 import android.text.format.Formatter
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts.CreateDocument
@@ -20,6 +26,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -35,6 +42,8 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -48,12 +57,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.shivam.sketchseed.BuildConfig
 import com.shivam.sketchseed.R
 import com.shivam.sketchseed.ai.TipAvailability
+import com.shivam.sketchseed.notify.ReminderSlot
 import com.shivam.sketchseed.ui.components.SectionHeader
+import java.time.LocalTime
+import java.util.Calendar
+
+private const val TAG = "SettingsScreen"
 
 private const val ZIP_MIME = "application/zip"
 
@@ -124,6 +140,13 @@ fun SettingsScreen(
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     var confirmingReset by remember { mutableStateOf(false) }
+    var editingSlot by remember { mutableStateOf<ReminderSlot?>(null) }
+
+    // The user may flip notifications in system settings and come straight back.
+    LifecycleResumeEffect(viewModel) {
+        viewModel.refreshNotificationState()
+        onPauseOrDispose { }
+    }
     var confirmingRestore by remember { mutableStateOf(false) }
 
     // Google hands back a PendingIntent when the user has to approve Drive
@@ -308,30 +331,100 @@ fun SettingsScreen(
             HorizontalDivider()
             Spacer(Modifier.height(24.dp))
 
-            // ── On-device AI ─────────────────────────────────────────────────
-            SectionHeader(stringResource(R.string.settings_ai_header))
+            // ── Reminders ────────────────────────────────────────────────────
+            SectionHeader(stringResource(R.string.settings_reminders_header))
 
             ListItem(
-                headlineContent = { Text(stringResource(R.string.settings_ai_tips_title)) },
+                headlineContent = { Text(stringResource(R.string.settings_reminders_title)) },
                 supportingContent = {
-                    Text(stringResource(R.string.settings_ai_tips_summary))
+                    Text(stringResource(R.string.settings_reminders_summary))
                 },
                 trailingContent = {
                     Switch(
-                        checked = state.settings.aiTipsEnabled,
-                        enabled = state.aiAvailability != TipAvailability.UNSUPPORTED,
-                        onCheckedChange = viewModel::setAiTipsEnabled,
+                        checked = state.settings.remindersEnabled,
+                        onCheckedChange = viewModel::setRemindersEnabled,
                     )
                 },
             )
 
-            state.aiAvailability?.let { availability ->
+            // Each slot is a tappable row showing its current time.
+            if (state.settings.remindersEnabled) {
+                ReminderSlot.entries.forEach { slot ->
+                    val at = slot.timeIn(state.settings)
+                    ListItem(
+                        headlineContent = {
+                            Text(
+                                stringResource(
+                                    when (slot) {
+                                        ReminderSlot.MORNING -> R.string.settings_reminder_first
+                                        ReminderSlot.EVENING -> R.string.settings_reminder_second
+                                        ReminderSlot.NIGHT -> R.string.settings_reminder_third
+                                    },
+                                ),
+                            )
+                        },
+                        trailingContent = {
+                            TextButton(onClick = { editingSlot = slot }) {
+                                Text(
+                                    text = formatTime(at),
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                            }
+                        },
+                    )
+                }
+            }
+
+            // Saying so beats a toggle that looks on while nothing arrives.
+            if (state.settings.remindersEnabled && !state.notificationsAllowed) {
+                Text(
+                    text = stringResource(R.string.settings_reminders_blocked),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(onClick = { openAppNotificationSettings(context) }) {
+                    Icon(
+                        Icons.AutoMirrored.Outlined.OpenInNew,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_reminders_open_system),
+                        modifier = Modifier.padding(start = 8.dp),
+                    )
+                }
+            }
+
+            // ── On-device AI ─────────────────────────────────────────────────
+            // Hidden entirely where Gemini Nano cannot run: a switch that can
+            // never be useful is worse than no switch at all.
+            if (state.showAiSection) {
+                Spacer(Modifier.height(24.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(24.dp))
+
+                SectionHeader(stringResource(R.string.settings_ai_header))
+
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.settings_ai_tips_title)) },
+                    supportingContent = {
+                        Text(stringResource(R.string.settings_ai_tips_summary))
+                    },
+                    trailingContent = {
+                        Switch(
+                            checked = state.settings.aiTipsEnabled,
+                            onCheckedChange = viewModel::setAiTipsEnabled,
+                        )
+                    },
+                )
+
                 Text(
                     text = stringResource(
-                        when (availability) {
-                            TipAvailability.READY -> R.string.settings_ai_status_available
-                            TipAvailability.NEEDS_DOWNLOAD -> R.string.settings_ai_status_downloadable
-                            TipAvailability.UNSUPPORTED -> R.string.settings_ai_status_unavailable
+                        if (state.aiAvailability == TipAvailability.READY) {
+                            R.string.settings_ai_status_available
+                        } else {
+                            R.string.settings_ai_status_downloadable
                         },
                     ),
                     style = MaterialTheme.typography.bodySmall,
@@ -432,6 +525,17 @@ fun SettingsScreen(
         )
     }
 
+    editingSlot?.let { slot ->
+        ReminderTimePicker(
+            initial = slot.timeIn(state.settings),
+            onDismiss = { editingSlot = null },
+            onConfirm = { at ->
+                viewModel.setReminderTime(slot, at)
+                editingSlot = null
+            },
+        )
+    }
+
     if (confirmingReset) {
         AlertDialog(
             onDismissRequest = { confirmingReset = false },
@@ -470,3 +574,68 @@ fun SettingsScreen(
 private fun Modifier.clickableIfNotBusy(busy: Boolean, onClick: () -> Unit): Modifier =
     this.clickable(enabled = !busy, onClick = onClick)
 
+/**
+ * Opens this app's notification settings.
+ *
+ * APP_NOTIFICATION_SETTINGS lands directly on the right screen; the app-details
+ * page is the fallback for anything that does not honour it.
+ */
+private fun openAppNotificationSettings(context: Context) {
+    val candidates = listOf(
+        Intent(AndroidSettings.ACTION_APP_NOTIFICATION_SETTINGS)
+            .putExtra(AndroidSettings.EXTRA_APP_PACKAGE, context.packageName),
+        Intent(
+            AndroidSettings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            "package:${context.packageName}".toUri(),
+        ),
+    )
+    for (intent in candidates) {
+        try {
+            context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            return
+        } catch (e: ActivityNotFoundException) {
+            Log.d(TAG, "Settings screen ${intent.action} not present", e)
+        }
+    }
+    Log.w(TAG, "No notification settings screen could be opened")
+}
+
+/** Localised clock time, so 18:00 or 6:00 PM depending on the phone. */
+@Composable
+private fun formatTime(at: LocalTime): String {
+    val context = LocalContext.current
+    val calendar = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, at.hour)
+        set(Calendar.MINUTE, at.minute)
+    }
+    return DateFormat.getTimeFormat(context).format(calendar.time)
+}
+
+/** Wraps Material's time picker in a dialog, since it does not ship as one. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReminderTimePicker(
+    initial: LocalTime,
+    onDismiss: () -> Unit,
+    onConfirm: (LocalTime) -> Unit,
+) {
+    val state = rememberTimePickerState(
+        initialHour = initial.hour,
+        initialMinute = initial.minute,
+        is24Hour = DateFormat.is24HourFormat(LocalContext.current),
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_reminder_pick)) },
+        text = { TimePicker(state = state) },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(LocalTime.of(state.hour, state.minute)) }) {
+                Text(stringResource(R.string.settings_reminder_set))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        },
+    )
+}

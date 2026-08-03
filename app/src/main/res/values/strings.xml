@@ -98,7 +98,6 @@
     <string name="extras_remove">Remove this sketch</string>
     <string name="extras_untitled">Untitled</string>
     <string name="extras_badge">+%1$d</string>
-    <string name="done_today_extras">Drawn something else today?</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
@@ -135,12 +134,30 @@
     <string name="settings_file_import_confirm_title">Replace everything?</string>
     <string name="settings_file_import_confirm_body">Restoring from a file overwrites the journey and sketches on this phone. Anything not in that file will be lost.</string>
 
+    <!-- Reminders -->
+    <string name="reminder_channel_name">Daily reminders</string>
+    <string name="reminder_channel_description">A nudge on days you haven\'t drawn yet.</string>
+    <string name="reminder_morning_title">Today\'s sketch is waiting</string>
+    <string name="reminder_evening_title">Still time to draw today</string>
+    <string name="reminder_night_title">Last chance today</string>
+    <string name="reminder_body">Day %1$d · %2$s</string>
+
+    <string name="settings_reminders_header">Reminders</string>
+    <string name="settings_reminders_title">Remind me to draw</string>
+    <string name="settings_reminders_summary">Three nudges a day at times you choose. Once you\'ve drawn, the rest of the day stays quiet.</string>
+    <string name="settings_reminder_first">First reminder</string>
+    <string name="settings_reminder_second">Second reminder</string>
+    <string name="settings_reminder_third">Third reminder</string>
+    <string name="settings_reminder_pick">Reminder time</string>
+    <string name="settings_reminder_set">Set</string>
+    <string name="settings_reminders_blocked">Notifications are turned off for Sketch Seed in Android settings, so no reminders can arrive.</string>
+    <string name="settings_reminders_open_system">Open notification settings</string>
+
     <string name="settings_ai_header">On-device AI</string>
     <string name="settings_ai_tips_title">Drawing tips</string>
     <string name="settings_ai_tips_summary">Generate a short tip for a prompt using Gemini Nano. Runs entirely on your phone; nothing is uploaded.</string>
     <string name="settings_ai_status_available">Ready</string>
     <string name="settings_ai_status_downloadable">Model not downloaded yet</string>
-    <string name="settings_ai_status_unavailable">Not supported on this device</string>
 
     <string name="settings_danger_header">Journey</string>
     <string name="settings_reset_title">Reset the journey</string>
