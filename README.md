@@ -155,10 +155,24 @@ fires, not by cancelling anything when you finish, so it holds however the day p
 out — app killed, day restored from a backup, clock rolled past midnight. The worker
 asks the same question every time: is there something to draw right now?
 
+All three slots share one notification, so a later nudge replaces an earlier unread one
+instead of leaving three stacked for the same undrawn day. That only works on a
+high-importance channel: at default importance the replacement made a sound but never
+surfaced, which is indistinguishable from no reminder at all. Android locks a channel's
+importance once created, so the channel id carries a version — raising it in place would
+have reached nobody who already had the app.
+
 WorkManager rather than exact alarms. A drawing reminder is fine arriving a few minutes
 late, and this survives reboots and Doze without the exact-alarm permission Android now
 guards closely. Denying the notification permission costs only the reminders; Settings
 says so plainly rather than showing a toggle that looks on while nothing arrives.
+
+Each slot is re-enqueued rather than updated in place. WorkManager fires periodic work
+at `last_enqueue_time + initialDelay`, and updating preserves the original
+`last_enqueue_time` — so a correctly computed delay was being measured from whenever the
+slot was first created, and every reminder fired early by exactly that gap. Hours, on an
+install of any age. Re-enqueueing resets the anchor, which is the only thing that makes
+the time you picked the time you get.
 
 ## On-device AI, or none at all
 

@@ -40,11 +40,26 @@ class SketchReminders(private val context: Context) {
     /** False when the user has turned the app's notifications off in system settings. */
     val enabledInSystemSettings: Boolean get() = manager.areNotificationsEnabled()
 
+    /**
+     * Creates the reminder channel, retiring the earlier one.
+     *
+     * [NotificationManager.IMPORTANCE_HIGH] so each nudge gets a heads-up banner.
+     * At IMPORTANCE_DEFAULT it made a sound but never surfaced, which combined
+     * badly with the single notification id below: a later slot silently rewrote
+     * an unread earlier one, so the evening and night nudges were trivial to miss
+     * even when they had fired correctly.
+     *
+     * The id carries a version because Android locks a channel's importance once
+     * it has been created — raising it in place reaches nobody who already has the
+     * app. A new id is the only way the change lands on an existing install, and
+     * the old channel is deleted so system settings does not list two.
+     */
     fun ensureChannel() {
+        manager.deleteNotificationChannel(RETIRED_CHANNEL_ID)
         val channel = NotificationChannel(
             CHANNEL_ID,
             context.getString(R.string.reminder_channel_name),
-            NotificationManager.IMPORTANCE_DEFAULT,
+            NotificationManager.IMPORTANCE_HIGH,
         ).apply {
             description = context.getString(R.string.reminder_channel_description)
             setShowBadge(true)
@@ -56,7 +71,9 @@ class SketchReminders(private val context: Context) {
      * Shows the reminder for [day].
      *
      * A single notification id on purpose: a later slot replaces the earlier one
-     * rather than stacking three unread nudges for the same undrawn day.
+     * rather than stacking three unread nudges for the same undrawn day. That only
+     * works because the channel is IMPORTANCE_HIGH — see [ensureChannel]. A silent
+     * in-place rewrite is indistinguishable from no reminder at all.
      */
     fun show(day: Int, promptText: String, slot: ReminderSlot) {
         if (!permitted) {
@@ -117,18 +134,31 @@ class SketchReminders(private val context: Context) {
 
         ReminderSlot.entries.forEach { slot ->
             val request = PeriodicWorkRequestBuilder<ReminderWorker>(1, TimeUnit.DAYS)
+                // Milliseconds, not minutes: Duration.toMinutes() truncates, which
+                // fired every reminder up to 59 seconds early.
                 .setInitialDelay(
-                    ReminderSlot.initialDelay(slot.timeIn(settings), now).toMinutes(),
-                    TimeUnit.MINUTES,
+                    ReminderSlot.initialDelay(slot.timeIn(settings), now).toMillis(),
+                    TimeUnit.MILLISECONDS,
                 )
                 .setInputData(ReminderWorker.inputFor(slot))
                 .build()
 
-            // UPDATE rather than KEEP so a changed slot time takes effect without
-            // the user having to clear app data.
+            // CANCEL_AND_REENQUEUE, not UPDATE.
+            //
+            // WorkManager fires periodic work at last_enqueue_time + initialDelay,
+            // and UPDATE keeps the *original* last_enqueue_time. So the delay —
+            // correctly measured from now — was being added to whenever the slot
+            // was first created, and every reminder fired early by exactly that
+            // gap. Minutes in a test; hours on a phone that had been installed a
+            // while, which is how the evening and night nudges ended up arming for
+            // late morning instead of 6pm and 10pm.
+            //
+            // Re-enqueueing resets the anchor, which is the only thing that makes
+            // setInitialDelay mean what it says. Re-running a slot is harmless:
+            // ReminderWorker decides whether to notify at fire time.
             work.enqueueUniquePeriodicWork(
                 slot.workName,
-                ExistingPeriodicWorkPolicy.UPDATE,
+                ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
                 request,
             )
         }
@@ -140,9 +170,15 @@ class SketchReminders(private val context: Context) {
         clear()
     }
 
-    private companion object {
-        const val TAG = "SketchReminders"
-        const val CHANNEL_ID = "daily-reminders"
+    internal companion object {
+        private const val TAG = "SketchReminders"
+
+        /** Bump the suffix to change channel settings a user already has. */
+        const val CHANNEL_ID = "daily-reminders-v2"
+
+        /** The IMPORTANCE_DEFAULT channel this replaced; deleted on first run. */
+        const val RETIRED_CHANNEL_ID = "daily-reminders"
+
         const val NOTIFICATION_ID = 1001
     }
 }
