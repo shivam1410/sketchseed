@@ -27,12 +27,42 @@ Three ideas that look similar are deliberately kept apart:
 |---|---|---|
 | **Day 17 of 100** | What the calendar says today is | Nothing — it moves on regardless |
 | **Completed** | How many you've actually finished | Nothing. Missed days stay open |
-| **Streak** | Consecutive calendar days you drew | Resets to zero, permanently |
+| **Streak** | Consecutive days you drew | One gap can be forgiven; two cannot |
 
-**Missed days stay open.** If you skip day 8, your streak dies — that's the point of a
-streak. But day 8's prompt is still there, and you can go back and draw it whenever.
-Finishing it does *not* resurrect the streak, because you genuinely didn't draw that
-day; the completion is recorded against the day you actually drew it.
+**Missed days stay open.** If you skip day 8, day 8's prompt is still there and you can
+go back and draw it whenever. Finishing it does *not* put a sketch on day 8's date,
+because you genuinely didn't draw that day; the completion is recorded against the day
+you actually drew it.
+
+### The day starts at 6am, not midnight
+
+Someone still awake at half past midnight thinking *"I should draw today's"* is, by any
+human account, finishing yesterday. Midnight is a boundary the clock cares about and
+nobody else does — and treating it as the cliff meant drawing at 00:14 served you
+tomorrow's prompt and counted the evening you were sitting in as missed.
+
+So a drawing day runs 6am to 6am. Only the journey uses this clock; reminders read the
+wall clock, because a 9am nudge means 9am.
+
+Records store the wall-clock time they were finished at, but the day a sketch counts for
+is decided once, when it's written, and never re-derived. Moving the boundary must not
+silently renumber history. Sketches finished before the app kept times have no time to
+recover, so they read as midnight — an assumption, not a measurement.
+
+### One missed day can be forgiven, but it has to be earned
+
+A single gap is bridged only if every one of the two days behind it that *existed* was
+drawn. The condition is the whole point: forgiving every isolated gap unconditionally
+would let you draw on alternate days forever and watch a streak climb on half the effort,
+which makes the number meaningless.
+
+"That existed" is load-bearing. A gap on your second day has only one day behind it, and
+holding out for two would make the rule unsatisfiable exactly when a new habit is most
+likely to slip.
+
+The forgiven day is bridged, never counted — a streak is always the number of days you
+actually drew, so it can never exceed the sketches behind it. Two gaps in a row can never
+both be forgiven, because the day behind the second one is itself missing.
 
 That also fixes joining late. Install on day 40 and days 1–39 are all sitting there
 waiting, so you still get the beginner ramp instead of being dropped into

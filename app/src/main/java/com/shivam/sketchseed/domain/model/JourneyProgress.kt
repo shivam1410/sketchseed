@@ -16,12 +16,17 @@ import java.time.temporal.ChronoUnit
  *  - [currentDay] — which prompt the calendar says it is. Identical for everyone.
  *  - [completedCount] — how many you have actually finished, including ones
  *    back-filled late. Personal.
- *  - [currentStreak] — consecutive calendar days you drew on. Personal, and
- *    unforgiving: back-filling day 8 on day 9 does not repair it, because you
- *    genuinely did not draw on day 8.
+ *  - [currentStreak] — consecutive drawing days you drew on. Personal, and
+ *    unmoved by back-filling: finishing day 8 on day 9 does not repair it,
+ *    because you genuinely did not draw on day 8. A single missed day can be
+ *    forgiven, but only if it was earned — see [Streaks].
  *
- * Missing a day therefore costs the streak but never costs the hundred: the
+ * Missing a day therefore may cost the streak but never costs the hundred: the
  * prompt stays open to [canComplete] afterwards.
+ *
+ * "Today" here is a drawing day, not a calendar day: it turns over at 6am, so
+ * someone drawing at half past midnight is finishing the day they think they are
+ * in. See [com.shivam.sketchseed.domain.DrawingDay].
  */
 data class JourneyProgress(
     val records: List<DayRecord>,
@@ -97,8 +102,8 @@ data class JourneyProgress(
                 totalDays = totalDays,
                 today = today,
                 startDate = startDate,
-                currentStreak = Streaks.current(dates, today),
-                bestStreak = Streaks.best(dates),
+                currentStreak = Streaks.current(dates, today, startDate),
+                bestStreak = Streaks.best(dates, startDate),
             )
         }
     }

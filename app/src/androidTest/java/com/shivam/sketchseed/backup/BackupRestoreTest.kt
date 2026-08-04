@@ -97,7 +97,9 @@ class BackupRestoreTest {
         val pack = PromptRepository(context).pack()
         val prompt = pack.promptFor(day)!!
         val fileName = photos.save(sourceImage(), day)!!
-        journey.complete(prompt, LocalDate.of(2026, 8, 2).plusDays(day.toLong()), fileName)
+        // Midday, so the drawing day is unambiguously this date and not the one
+        // before it — see DrawingDay, which turns days over at 6am.
+        journey.complete(prompt, DAY_ONE.plusDays(day.toLong()).atTime(12, 0), fileName)
         return fileName
     }
 
@@ -146,7 +148,7 @@ class BackupRestoreTest {
     @Test
     fun aJourneyWithNoSketchesRoundTripsCleanly() = runTest {
         val pack = PromptRepository(context).pack()
-        journey.complete(pack.promptFor(1)!!, LocalDate.of(2026, 8, 2))
+        journey.complete(pack.promptFor(1)!!, DAY_ONE.atTime(12, 0))
         val archive = tempFile("backup.zip")
         repository.exportTo(Uri.fromFile(archive))
 
@@ -220,5 +222,10 @@ class BackupRestoreTest {
         assertEquals("the later day must be gone after a restore", 1, records.size)
         assertEquals(1, records.single().day)
         assertEquals("its orphaned sketch must be swept up too", 1, photos.usage().fileCount)
+    }
+
+    private companion object {
+        /** Any fixed day works; the journey maths does not care which. */
+        val DAY_ONE: LocalDate = LocalDate.of(2026, 8, 2)
     }
 }

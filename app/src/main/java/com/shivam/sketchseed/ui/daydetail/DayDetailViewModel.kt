@@ -127,7 +127,7 @@ class DayDetailViewModel(
         if (!state.canComplete) return
 
         viewModelScope.launch {
-            container.journeyRepository.complete(prompt = prompt, completedOn = today.value)
+            container.journeyRepository.complete(prompt = prompt, completedAt = container.now())
         }
     }
 
@@ -143,7 +143,7 @@ class DayDetailViewModel(
                     // Still record the day if scanning was how they completed it.
                     if (state.canComplete) {
                         state.prompt?.let {
-                            container.journeyRepository.complete(it, today.value)
+                            container.journeyRepository.complete(it, container.now())
                         }
                     }
                     return@launch
@@ -153,7 +153,7 @@ class DayDetailViewModel(
                     state.prompt?.let {
                         container.journeyRepository.complete(
                             prompt = it,
-                            completedOn = today.value,
+                            completedAt = container.now(),
                             photoFileName = fileName,
                         )
                     }

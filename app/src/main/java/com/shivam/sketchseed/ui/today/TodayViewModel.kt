@@ -211,7 +211,7 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
         viewModelScope.launch {
             container.journeyRepository.complete(
                 prompt = prompt,
-                completedOn = today.value,
+                completedAt = container.now(),
                 tip = (tip.value as? TipState.Ready)?.text,
             )
             tip.value = TipState.Idle
@@ -235,7 +235,7 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
                             .save(uri, mode.prompt.day)
                         container.journeyRepository.complete(
                             prompt = mode.prompt,
-                            completedOn = today.value,
+                            completedAt = container.now(),
                             photoFileName = fileName,
                             tip = (tip.value as? TipState.Ready)?.text,
                         )

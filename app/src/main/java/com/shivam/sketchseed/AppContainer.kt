@@ -10,8 +10,10 @@ import com.shivam.sketchseed.data.PhotoStore
 import com.shivam.sketchseed.data.PromptRepository
 import com.shivam.sketchseed.data.SettingsRepository
 import com.shivam.sketchseed.data.appDataStore
+import com.shivam.sketchseed.domain.DrawingDay
 import com.shivam.sketchseed.notify.SketchReminders
 import java.time.LocalDate
+import java.time.LocalDateTime
 import kotlinx.coroutines.flow.first
 
 /**
@@ -41,8 +43,17 @@ class AppContainer(context: Context) {
         appVersion = BuildConfig.VERSION_NAME,
     )
 
-    /** Indirection so tests can pin "today" instead of reading the system clock. */
-    val today: () -> LocalDate = LocalDate::now
+    /** Indirection so tests can pin the clock instead of reading the system one. */
+    val now: () -> LocalDateTime = LocalDateTime::now
+
+    /**
+     * The drawing day the app treats as current.
+     *
+     * Turns over at 6am rather than midnight, so someone drawing after midnight is
+     * still finishing the day they believe they are in. See [DrawingDay]. Reminder
+     * scheduling deliberately reads the wall clock instead — a 9am nudge means 9am.
+     */
+    val today: () -> LocalDate = { DrawingDay.of(now()) }
 
     /**
      * Anchors day 1 to the day this install first ran.

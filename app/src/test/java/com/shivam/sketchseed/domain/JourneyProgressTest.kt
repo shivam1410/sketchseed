@@ -90,28 +90,50 @@ class JourneyProgressTest {
     // ── The two-friends scenario ─────────────────────────────────────────────
 
     @Test
-    fun `missing day eight breaks the streak but leaves the prompt open`() {
+    fun `missing day eight is forgiven because seven straight days earned it`() {
         // Both friends drew days 1-7. This one skipped day 8. It is now day 9.
+        //
+        // The streak survives: a single gap is bridged when the two days behind it
+        // were drawn, and seven consecutive days more than covers that. Day 8 is
+        // bridged, never counted — the streak is the seven days actually drawn.
         val p = progressOn(9, (1..7).map { record(it) })
 
         assertEquals(9, p.currentDay)
         assertEquals(listOf(8), p.missedDays)
         assertTrue("day 8 must remain back-fillable", p.canComplete(8))
-        assertEquals("the streak is gone", 0, p.currentStreak)
-        assertEquals(7, p.bestStreak)
+        assertEquals(7, p.currentStreak)
         assertEquals(7, p.completedCount)
+        assertEquals("bridged, not counted", p.completedCount, p.currentStreak)
     }
 
     @Test
-    fun `back-filling day eight on day nine does not repair the streak`() {
-        val backFilled = record(day = 8, drawnOn = dateOfDay(9))
-        val p = progressOn(9, (1..7).map { record(it) } + backFilled)
+    fun `a second missed day in a row is not forgiven`() {
+        // Days 1-7 drawn, 8 and 9 both missed, now day 10. The day behind the
+        // second gap is itself missing, so the rule cannot be satisfied.
+        val p = progressOn(10, (1..7).map { record(it) })
 
-        assertEquals(8, p.completedCount)
-        assertTrue(p.missedDays.isEmpty())
-        // Drawing today starts a fresh streak of one; it does not restore seven.
-        assertEquals(1, p.currentStreak)
+        assertEquals(listOf(8, 9), p.missedDays)
+        assertEquals(0, p.currentStreak)
         assertEquals(7, p.bestStreak)
+    }
+
+    @Test
+    fun `back-filling counts the day it was drawn, not the day it was for`() {
+        // The invariant forgiveness does not change: a record is recorded against
+        // the date the user actually drew. Back-filling can therefore never
+        // manufacture attendance on a date they were absent.
+        //
+        // Days 1 and 4 drawn on their own dates, 2 and 3 both missed — an
+        // unforgivable double gap. Back-filling day 2 on day 4 closes the hole in
+        // the journey without putting anything on day 2's or day 3's date.
+        val backFilled = record(day = 2, drawnOn = dateOfDay(4))
+        val p = progressOn(4, listOf(record(1), record(4), backFilled))
+
+        assertEquals(3, p.completedCount)
+        assertEquals(listOf(3), p.missedDays)
+        // Day 4 alone: day 3 is missing and day 2's date was never drawn on, so
+        // there is nothing behind the gap to earn forgiveness with.
+        assertEquals(1, p.currentStreak)
     }
 
     @Test
@@ -224,12 +246,19 @@ class JourneyProgressTest {
 
     @Test
     fun `extras do not extend the streak`() {
-        // Drew day 1 only, then piled on extras. Two calendar days have passed.
+        // Drew day 1 only, then piled on five extras. It is now day 3, so day 2 is
+        // a gap — forgiven, because day 1 was the only prior day that existed and
+        // it was drawn.
+        //
+        // The point of this test is that the five extras contribute nothing: the
+        // streak is identical with and without them.
         val loaded = record(1).copy(extras = List(5) { extra(it) })
-        val p = progressOn(3, listOf(loaded))
+        val withExtras = progressOn(3, listOf(loaded))
+        val withoutExtras = progressOn(3, listOf(record(1)))
 
-        assertEquals(0, p.currentStreak)
-        assertEquals(1, p.bestStreak)
+        assertEquals(withoutExtras.currentStreak, withExtras.currentStreak)
+        assertEquals(withoutExtras.bestStreak, withExtras.bestStreak)
+        assertEquals(1, withExtras.currentStreak)
     }
 
     @Test

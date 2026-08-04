@@ -11,6 +11,7 @@ import com.shivam.sketchseed.domain.model.ExtraSketch
 import com.shivam.sketchseed.domain.model.Prompt
 import java.io.IOException
 import java.time.LocalDate
+import java.time.LocalDateTime
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
@@ -42,17 +43,22 @@ class JourneyRepository(
         }
         .map { prefs -> prefs.decodeRecords() }
 
-    /** Appends a finished day. */
+    /**
+     * Appends a finished day.
+     *
+     * Takes the wall-clock moment rather than a date: the drawing day it counts
+     * for is derived from it once, here, and then fixed. See [DayRecord].
+     */
     suspend fun complete(
         prompt: Prompt,
-        completedOn: LocalDate,
+        completedAt: LocalDateTime,
         photoFileName: String? = null,
         tip: String? = null,
     ) = mutate { current ->
         if (current.any { it.day == prompt.day }) {
             current
         } else {
-            current + DayRecord.of(prompt, completedOn, photoFileName, tip)
+            current + DayRecord.of(prompt, completedAt, photoFileName, tip)
         }
     }
 
