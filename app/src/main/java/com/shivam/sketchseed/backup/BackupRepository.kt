@@ -247,6 +247,26 @@ class BackupRepository(
             contents.photos.forEach { (name, file) ->
                 if (photoStore.adopt(file, name)) add(name) else Log.e(TAG, "Could not restore $name")
             }
+
+            // A sketch already on this phone, under the name a restored record asks
+            // for, is that sketch. Keep it.
+            //
+            // Without this, an archive missing its images was actively destructive
+            // rather than merely disappointing: every reference was dropped as
+            // dangling and retainOnly then swept the local files, so a sketch that
+            // was safely on disk before the restore was gone afterwards with nothing
+            // pointing at it. Hand-edited backups lose the sketches folder easily,
+            // and losing the archive's copy should never cost the phone's copy too.
+            //
+            // Replace-wholesale still holds: anything the restored journey does not
+            // name is deleted as before.
+            val kept = contents.records
+                .flatMap(::photoNamesOf)
+                .filter { it !in this && photoStore.resolve(it) != null }
+            if (kept.isNotEmpty()) {
+                Log.w(TAG, "Archive omitted ${kept.size} sketches already on this device; keeping them")
+                addAll(kept)
+            }
         }
 
         // Day numbers are counted from the start date, so restoring records
