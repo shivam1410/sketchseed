@@ -64,6 +64,11 @@ The forgiven day is bridged, never counted — a streak is always the number of 
 actually drew, so it can never exceed the sketches behind it. Two gaps in a row can never
 both be forgiven, because the day behind the second one is itself missing.
 
+Because a streak counts **days** and progress counts **sketches**, back-filling a day
+alongside another one makes the two disagree: three sketches drawn across two days is a
+streak of two. That reads like a bug, so when the numbers diverge the Journey screen says
+which it is rather than leaving you to work it out.
+
 That also fixes joining late. Install on day 40 and days 1–39 are all sitting there
 waiting, so you still get the beginner ramp instead of being dropped into
 `Country Road` on your first evening.
@@ -196,6 +201,19 @@ WorkManager rather than exact alarms. A drawing reminder is fine arriving a few 
 late, and this survives reboots and Doze without the exact-alarm permission Android now
 guards closely. Denying the notification permission costs only the reminders; Settings
 says so plainly rather than showing a toggle that looks on while nothing arrives.
+
+**A nudge more than two hours from its slot is dropped.** Inexactness is the price of
+not using exact alarms, but Doze, battery saver or an app upgrade can hold a job for
+much longer — and a held job runs at the next opportunity, which is usually the moment
+you open the app. Without a check on how late it is, opening the app hands you a
+reminder for a slot long gone, still captioned "morning" at teatime. Saying nothing is
+better than saying the wrong thing.
+
+Reminder delays are elapsed durations, so moving timezone leaves a pending one counted
+out at the old offset. A receiver on `TIMEZONE_CHANGED` and `TIME_SET` re-anchors them —
+neither needs a permission. Not `BOOT_COMPLETED`, which does: WorkManager restores its
+own jobs across a reboot. A DST rollover inside one zone broadcasts neither, so that
+still lags until the next launch.
 
 Each slot is re-enqueued rather than updated in place. WorkManager fires periodic work
 at `last_enqueue_time + initialDelay`, and updating preserves the original

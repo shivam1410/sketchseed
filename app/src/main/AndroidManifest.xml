@@ -50,6 +50,20 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+        <!--
+          Re-anchors reminders when the wall clock moves. Neither action needs a
+          permission, and neither is BOOT_COMPLETED — WorkManager restores its own
+          jobs across a reboot. Not exported: only the system sends these.
+        -->
+        <receiver
+            android:name=".notify.ClockChangeReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>

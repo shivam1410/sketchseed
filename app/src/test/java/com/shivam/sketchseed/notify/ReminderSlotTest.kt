@@ -5,6 +5,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -97,5 +98,64 @@ class ReminderSlotTest {
         val names = ReminderSlot.entries.map { it.workName }
 
         assertEquals(names.size, names.toSet().size)
+    }
+
+    // ── Staleness: a job the OS held back must not nudge for a slot long gone ──
+
+    @Test
+    fun `a run on time is not stale`() {
+        assertFalse(ReminderSlot.isStale(LocalTime.of(9, 0), at(9, 0)))
+    }
+
+    @Test
+    fun `a run a few minutes late is still worth posting`() {
+        // WorkManager is inexact by design; nine seconds to a few minutes is normal.
+        assertFalse(ReminderSlot.isStale(LocalTime.of(9, 0), at(9, 12)))
+    }
+
+    @Test
+    fun `a run just inside the tolerance still posts`() {
+        assertFalse(ReminderSlot.isStale(LocalTime.of(9, 0), at(10, 59)))
+    }
+
+    @Test
+    fun `a run hours late is stale`() {
+        // The reported symptom: a deferred job runs when the app is next opened, and
+        // a morning nudge arrives at teatime.
+        assertTrue(ReminderSlot.isStale(LocalTime.of(9, 0), at(15, 30)))
+    }
+
+    @Test
+    fun `lateness is measured against the nearest occurrence, not today's`() {
+        // 00:30 against a 22:00 slot is two and a half hours late, not twenty-one
+        // and a half early. Getting this wrong would mark every after-midnight run
+        // stale regardless of its slot.
+        assertEquals(150, ReminderSlot.drift(LocalTime.of(22, 0), at(0, 30)).toMinutes())
+    }
+
+    @Test
+    fun `a night slot run shortly after midnight is judged on that basis`() {
+        assertFalse(ReminderSlot.isStale(LocalTime.of(22, 0), at(23, 30)))
+        assertTrue(ReminderSlot.isStale(LocalTime.of(22, 0), at(1, 30)))
+    }
+
+    @Test
+    fun `drift is positive when late and negative when early`() {
+        assertTrue(ReminderSlot.drift(LocalTime.of(9, 0), at(10, 0)).toMinutes() > 0)
+        assertTrue(ReminderSlot.drift(LocalTime.of(9, 0), at(8, 0)).toMinutes() < 0)
+    }
+
+    @Test
+    fun `every slot at its own time is fresh, and hours off is not`() {
+        val settings = Settings()
+
+        ReminderSlot.entries.forEach { slot ->
+            val on = slot.timeIn(settings)
+            assertFalse("$slot on time", ReminderSlot.isStale(on, day.atTime(on)))
+            assertTrue(
+                "$slot five hours late",
+                ReminderSlot.isStale(on, day.atTime(on).plusHours(5)),
+            )
+        }
     }
 }

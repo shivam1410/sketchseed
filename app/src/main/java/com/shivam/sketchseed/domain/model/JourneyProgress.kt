@@ -58,6 +58,18 @@ data class JourneyProgress(
 
     val completedCount: Int get() = records.size
 
+    /**
+     * How many distinct dates the finished days were drawn on.
+     *
+     * Lower than [completedCount] whenever a day was back-filled alongside another,
+     * which is the only reason a streak can read lower than the number of sketches.
+     * Surfaced so the two numbers can explain themselves instead of looking broken.
+     */
+    val drawingDaysCount: Int get() = records.mapTo(mutableSetOf()) { it.completedOn }.size
+
+    /** True when sketches outnumber the days they were drawn on. */
+    val hasDoubledUpDays: Boolean get() = drawingDaysCount < completedCount
+
     val isComplete: Boolean get() = completedCount >= totalDays
 
     val percentComplete: Int

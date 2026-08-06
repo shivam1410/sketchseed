@@ -74,6 +74,14 @@
     <string name="journey_stat_completed">Completed</string>
     <string name="journey_stat_streak">Streak</string>
     <string name="journey_stat_best">Best streak</string>
+    <!--
+      Shown only when sketches outnumber the days they were drawn on, which is the
+      one case where a streak reads lower than the number finished and looks wrong.
+    -->
+    <plurals name="journey_drawn_across_days">
+        <item quantity="one">%1$d sketches across %2$d day — a streak counts days, not sketches</item>
+        <item quantity="other">%1$d sketches across %2$d days — a streak counts days, not sketches</item>
+    </plurals>
 
     <!-- Day detail -->
     <string name="day_detail_title">Day %1$d</string>

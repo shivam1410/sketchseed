@@ -302,4 +302,42 @@ class JourneyProgressTest {
         assertFalse(p.canDrawToday)
         assertEquals(0, p.revealedThrough)
     }
+
+    // ── Explaining a streak that reads lower than the count ──────────────────
+
+    @Test
+    fun `two sketches on one date count as one drawing day`() {
+        // The reported confusion: three sketches, streak of two. Day 2 was
+        // back-filled on the same date day 3 was drawn, so there are only two dates.
+        val p = progressOn(3, listOf(record(1), record(2, drawnOn = dateOfDay(3)), record(3)))
+
+        assertEquals(3, p.completedCount)
+        assertEquals(2, p.drawingDaysCount)
+        assertTrue("the screen must be able to say why", p.hasDoubledUpDays)
+        assertEquals(p.drawingDaysCount, p.currentStreak)
+    }
+
+    @Test
+    fun `nothing is flagged when every sketch has its own date`() {
+        val p = progressOn(3, (1..3).map { record(it) })
+
+        assertEquals(3, p.drawingDaysCount)
+        assertFalse(p.hasDoubledUpDays)
+    }
+
+    @Test
+    fun `an empty journey has no drawing days and nothing to explain`() {
+        val p = progressOn(1, emptyList())
+
+        assertEquals(0, p.drawingDaysCount)
+        assertFalse(p.hasDoubledUpDays)
+    }
+
+    @Test
+    fun `extras never add a drawing day`() {
+        val p = progressOn(2, listOf(record(1).copy(extras = List(3) { extra(it) })))
+
+        assertEquals(1, p.drawingDaysCount)
+        assertFalse(p.hasDoubledUpDays)
+    }
 }

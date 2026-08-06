@@ -35,6 +35,16 @@ class ReminderWorker(
             return Result.success()
         }
 
+        // A held-back job runs at the next opportunity, which is usually the moment
+        // the app is opened — so without this the user taps the icon and is handed a
+        // reminder for a slot hours gone. Better to say nothing than the wrong thing.
+        val slot = slot()
+        val at = slot.timeIn(settings)
+        if (ReminderSlot.isStale(at, container.now())) {
+            Log.i(TAG, "$slot is ${ReminderSlot.drift(at, container.now()).toMinutes()}min off $at; skipping")
+            return Result.success()
+        }
+
         val pack = try {
             container.promptRepository.pack()
         } catch (e: Exception) {
@@ -59,7 +69,7 @@ class ReminderWorker(
         val day = progress.currentDay ?: return Result.success()
         val prompt = pack.promptFor(day) ?: return Result.success()
 
-        container.reminders.show(day = day, promptText = prompt.text, slot = slot())
+        container.reminders.show(day = day, promptText = prompt.text, slot = slot)
         return Result.success()
     }
 

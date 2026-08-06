@@ -147,6 +147,25 @@ fun JourneyScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+
+                        // Only when the two numbers disagree. Back-filling a day
+                        // alongside another one makes the streak read lower than the
+                        // count, which looks like a bug until someone says why.
+                        if (progress.hasDoubledUpDays) {
+                            Spacer(Modifier.height(6.dp))
+
+                            Text(
+                                text = pluralStringResource(
+                                    R.plurals.journey_drawn_across_days,
+                                    progress.drawingDaysCount,
+                                    progress.completedCount,
+                                    progress.drawingDaysCount,
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
                     }
                 }
             }

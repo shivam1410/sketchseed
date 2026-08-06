@@ -36,6 +36,15 @@ enum class ReminderSlot(val workName: String) {
 
     companion object {
         /**
+         * How far a run may drift from its slot and still be worth posting.
+         *
+         * A nudge an hour late is still a nudge. Several hours late is a different
+         * message entirely — "last chance today" arriving at breakfast, or a
+         * morning reminder at teatime.
+         */
+        val TOLERANCE: Duration = Duration.ofHours(2)
+
+        /**
          * How long until [at] next comes round.
          *
          * Rolls to tomorrow when the time has already passed today, which is the
@@ -48,5 +57,34 @@ enum class ReminderSlot(val workName: String) {
             val next = if (todayAt.isAfter(now)) todayAt else todayAt.plusDays(1)
             return Duration.between(now, next)
         }
+
+        /**
+         * How far [now] sits from the nearest occurrence of [at]; positive is late.
+         *
+         * Measured against the nearest occurrence in either direction rather than
+         * today's, so a run just after midnight is judged against last night's slot
+         * instead of being scored as almost a full day early.
+         */
+        fun drift(at: LocalTime, now: LocalDateTime): Duration {
+            val todayAt = now.toLocalDate().atTime(at)
+            return listOf(todayAt.minusDays(1), todayAt, todayAt.plusDays(1))
+                .map { Duration.between(it, now) }
+                .minByOrNull { it.absolute() }
+                ?: Duration.ZERO
+        }
+
+        /**
+         * Whether a run at [now] has drifted too far from [at] to post.
+         *
+         * WorkManager is inexact by design, and Doze, battery saver or an app
+         * upgrade can hold a job for hours — it then runs at the next opportunity,
+         * which is usually the moment the app is opened. Without this the user gets
+         * a reminder the instant they open the app, naming a time long past.
+         */
+        fun isStale(at: LocalTime, now: LocalDateTime, tolerance: Duration = TOLERANCE): Boolean =
+            drift(at, now).absolute() > tolerance
+
+        /** [Duration.abs] is Java 18; this has to run on API 26. */
+        private fun Duration.absolute(): Duration = if (isNegative) negated() else this
     }
 }
