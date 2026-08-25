@@ -102,9 +102,9 @@ rather than a wipe that leaves you stranded on day 40 with 39 days to catch up.
   tap away, because the point of this screen is that you look at it and start drawing.
 - **Journey** — all 100 days as a grid of thumbnails, with every number: completed,
   current streak, best streak, and the progress bar. Tap any finished day to revisit it.
-- **Day detail** — the full sketch, when you drew it, the tip if you asked for one, and
-  anything extra you drew that day.
-- **Settings** — reminders, Drive backup, export and import, on-device AI, and reset.
+- **Day detail** — the full sketch, when you drew it, and anything extra you drew that
+  day.
+- **Settings** — reminders, Drive backup, export and import, the update check, and reset.
 
 ## Reference search
 
