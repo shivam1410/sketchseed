@@ -11,8 +11,6 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.shivam.sketchseed.AppContainer
 import com.shivam.sketchseed.R
 import com.shivam.sketchseed.SketchSeedApplication
-import com.shivam.sketchseed.ai.TipAvailability
-import com.shivam.sketchseed.ai.TipResult
 import com.shivam.sketchseed.data.Settings
 import com.shivam.sketchseed.domain.model.DayRecord
 import com.shivam.sketchseed.domain.model.JourneyProgress
@@ -48,22 +46,9 @@ sealed interface TodayMode {
     data object Finished : TodayMode
 }
 
-sealed interface TipState {
-    /** Tips are switched off, or there is nothing to draw. */
-    data object Hidden : TipState
-    data object Idle : TipState
-    data object Working : TipState
-
-    /** AICore is fetching Gemini Nano. [bytesDownloaded] is 0 until it reports. */
-    data class Preparing(val bytesDownloaded: Long) : TipState
-    data class Ready(val text: String) : TipState
-    data class Error(@param:StringRes val messageId: Int) : TipState
-}
-
 data class TodayUiState(
     val mode: TodayMode = TodayMode.Loading,
     val progress: JourneyProgress? = null,
-    val tip: TipState = TipState.Hidden,
     val savingPhoto: Boolean = false,
     /** Days behind today that are still undrawn. */
     val missedCount: Int = 0,
@@ -75,24 +60,19 @@ private data class Snapshot(
     val settings: Settings,
     val pack: PromptPack?,
     val today: LocalDate,
-    val tip: TipState,
 )
 
 private data class Transient(
     val savingPhoto: Boolean,
     @param:StringRes val errorMessage: Int?,
-    /** Null while still being probed; treated as unsupported until known. */
-    val aiSupported: Boolean?,
 )
 
 class TodayViewModel(private val container: AppContainer) : ViewModel() {
 
     private val pack = MutableStateFlow<PromptPack?>(null)
     private val today = MutableStateFlow(container.today())
-    private val tip = MutableStateFlow<TipState>(TipState.Idle)
     private val savingPhoto = MutableStateFlow(false)
     private val errorMessage = MutableStateFlow<Int?>(null)
-    private val aiSupported = MutableStateFlow<Boolean?>(null)
 
     /**
      * Bonus sketches for the day just finished.
@@ -118,23 +98,15 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
                 Log.e(TAG, "Prompt pack could not be loaded", e)
             }
         }
-
-        // Hardware that cannot run Gemini Nano should never be offered a
-        // nudge button, so the whole affordance waits on this answer.
-        viewModelScope.launch {
-            aiSupported.value =
-                container.tipGenerator.availability() != TipAvailability.UNSUPPORTED
-        }
     }
 
-    private val transient = combine(savingPhoto, errorMessage, aiSupported, ::Transient)
+    private val transient = combine(savingPhoto, errorMessage, ::Transient)
 
     val uiState: StateFlow<TodayUiState> = combine(
         container.journeyRepository.records,
         container.settingsRepository.settings,
         pack,
         today,
-        tip,
         ::Snapshot,
     ).combine(transient) { snapshot, extras ->
         snapshot.toUiState(extras)
@@ -176,16 +148,6 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
         return TodayUiState(
             mode = mode,
             progress = progress,
-            // A tip only makes sense while there is something left to draw.
-            tip = if (
-                mode is TodayMode.Draw &&
-                settings.aiTipsEnabled &&
-                extras.aiSupported == true
-            ) {
-                tip
-            } else {
-                TipState.Hidden
-            },
             savingPhoto = extras.savingPhoto,
             missedCount = progress.missedDays.size,
             errorMessage = extras.errorMessage,
@@ -200,10 +162,7 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
      */
     fun refreshDate() {
         val now = container.today()
-        if (now != today.value) {
-            today.value = now
-            tip.value = TipState.Idle
-        }
+        if (now != today.value) today.value = now
     }
 
     fun markDone() {
@@ -212,9 +171,7 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
             container.journeyRepository.complete(
                 prompt = prompt,
                 completedAt = container.now(),
-                tip = (tip.value as? TipState.Ready)?.text,
             )
-            tip.value = TipState.Idle
         }
     }
 
@@ -237,9 +194,7 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
                             prompt = mode.prompt,
                             completedAt = container.now(),
                             photoFileName = fileName,
-                            tip = (tip.value as? TipState.Ready)?.text,
                         )
-                        tip.value = TipState.Idle
                         if (fileName == null) errorMessage.value = R.string.photo_save_failed
                     }
 
@@ -266,33 +221,6 @@ class TodayViewModel(private val container: AppContainer) : ViewModel() {
 
     fun dismissError() {
         errorMessage.value = null
-    }
-
-    fun requestTip() {
-        val prompt = currentPrompt() ?: return
-        if (tip.value is TipState.Working || tip.value is TipState.Preparing) return
-
-        viewModelScope.launch {
-            tip.value = TipState.Working
-            val result = container.tipGenerator.generate(
-                promptText = prompt.text,
-                difficulty = prompt.difficulty,
-                onPreparing = { bytes -> tip.value = TipState.Preparing(bytes) },
-            )
-            tip.value = when (result) {
-                is TipResult.Success -> TipState.Ready(result.tip)
-                TipResult.Unsupported -> TipState.Error(R.string.tip_unavailable)
-                TipResult.TimedOut -> TipState.Error(R.string.tip_timed_out)
-                is TipResult.Failed -> {
-                    Log.w(TAG, "Tip generation failed", result.cause)
-                    TipState.Error(R.string.tip_failed)
-                }
-            }
-        }
-    }
-
-    fun dismissTip() {
-        tip.value = TipState.Idle
     }
 
     private fun currentPrompt(): Prompt? = (uiState.value.mode as? TodayMode.Draw)?.prompt

@@ -17,9 +17,14 @@ import kotlinx.coroutines.flow.map
 
 /** User-facing toggles. */
 data class Settings(
-    val aiTipsEnabled: Boolean = true,
     /** When the last successful Drive backup finished, or null if never. */
     val lastDriveBackupEpochSecond: Long? = null,
+    /**
+     * When the app last asked GitHub for the newest release, or null if never.
+     *
+     * Only throttles the automatic check; see `UpdateSchedule`.
+     */
+    val lastUpdateCheckEpochSecond: Long? = null,
     /** Whether to back up to Drive on its own after each finished day. */
     val autoDriveBackup: Boolean = true,
     /**
@@ -79,8 +84,8 @@ class SettingsRepository(
         }
         .map { prefs ->
             Settings(
-                aiTipsEnabled = prefs[KEY_AI_TIPS] ?: true,
                 lastDriveBackupEpochSecond = prefs[KEY_LAST_DRIVE_BACKUP],
+                lastUpdateCheckEpochSecond = prefs[KEY_LAST_UPDATE_CHECK],
                 autoDriveBackup = prefs[KEY_AUTO_DRIVE_BACKUP] ?: true,
                 startDateOverrideEpochDay = prefs[KEY_START_DATE_OVERRIDE],
                 remindersEnabled = prefs[KEY_REMINDERS] ?: true,
@@ -119,18 +124,18 @@ class SettingsRepository(
         dataStore.edit { it[KEY_AUTO_DRIVE_BACKUP] = enabled }
     }
 
-    suspend fun setAiTipsEnabled(enabled: Boolean) {
-        dataStore.edit { it[KEY_AI_TIPS] = enabled }
-    }
-
     suspend fun setLastDriveBackup(epochSecond: Long) {
         dataStore.edit { it[KEY_LAST_DRIVE_BACKUP] = epochSecond }
     }
 
+    suspend fun setLastUpdateCheck(epochSecond: Long) {
+        dataStore.edit { it[KEY_LAST_UPDATE_CHECK] = epochSecond }
+    }
+
     private companion object {
         const val TAG = "SettingsRepository"
-        val KEY_AI_TIPS = booleanPreferencesKey("ai_tips_enabled")
         val KEY_LAST_DRIVE_BACKUP = longPreferencesKey("last_drive_backup")
+        val KEY_LAST_UPDATE_CHECK = longPreferencesKey("last_update_check")
         val KEY_AUTO_DRIVE_BACKUP = booleanPreferencesKey("auto_drive_backup")
         val KEY_START_DATE_OVERRIDE = longPreferencesKey("start_date_override")
         val KEY_REMINDERS = booleanPreferencesKey("reminders_enabled")

@@ -55,16 +55,6 @@
     <string name="difficulty_medium">Medium</string>
     <string name="difficulty_hard">Hard</string>
 
-    <!-- On-device AI tip -->
-    <string name="tip_get">Need a nudge?</string>
-    <string name="tip_generating">Thinking…</string>
-    <string name="tip_heading">Tip</string>
-    <string name="tip_unavailable">On-device tips aren\'t available on this device.</string>
-    <string name="tip_failed">Couldn\'t generate a tip. Try again.</string>
-    <string name="tip_preparing">Downloading the on-device model… %1$s</string>
-    <string name="tip_preparing_starting">Preparing the on-device model…</string>
-    <string name="tip_timed_out">The model is taking too long. It may still be downloading — try again in a bit.</string>
-
     <!-- Journey / calendar -->
     <string name="journey_title">Journey</string>
     <string name="journey_locked_day">Day %1$d, not unlocked yet</string>
@@ -161,12 +151,6 @@
     <string name="settings_reminders_blocked">Notifications are turned off for Sketch Seed in Android settings, so no reminders can arrive.</string>
     <string name="settings_reminders_open_system">Open notification settings</string>
 
-    <string name="settings_ai_header">On-device AI</string>
-    <string name="settings_ai_tips_title">Drawing tips</string>
-    <string name="settings_ai_tips_summary">Generate a short tip for a prompt using Gemini Nano. Runs entirely on your phone; nothing is uploaded.</string>
-    <string name="settings_ai_status_available">Ready</string>
-    <string name="settings_ai_status_downloadable">Model not downloaded yet</string>
-
     <string name="settings_danger_header">Journey</string>
     <string name="settings_reset_title">Reset the journey</string>
     <string name="settings_reset_summary">Clears every completion, the streak, and all sketch photos, and starts the hundred again from today. This cannot be undone.</string>
@@ -181,6 +165,32 @@
     <string name="settings_about_header">About</string>
     <string name="settings_about_version">Version %1$s</string>
     <string name="settings_about_tagline">One prompt a day, for a hundred days.</string>
+
+    <!-- Updates -->
+    <string name="settings_update_check">Check for updates</string>
+    <string name="settings_update_check_summary">Sketch Seed isn\'t on the Play Store, so it asks GitHub whether a newer build has been published.</string>
+    <string name="settings_update_checking">Checking for updates…</string>
+    <string name="settings_update_current">You\'re on the latest version</string>
+    <string name="settings_update_current_summary">Tap to check again.</string>
+    <string name="settings_update_check_failed">Couldn\'t check for updates</string>
+    <string name="settings_update_check_failed_summary">GitHub couldn\'t be reached. Tap to try again.</string>
+    <string name="settings_update_available">Version %1$s is available</string>
+    <string name="settings_update_available_summary">%1$s · %2$s, downloaded over your own connection.</string>
+    <string name="settings_update_download">Download</string>
+    <string name="settings_update_downloading">Downloading version %1$s</string>
+    <string name="settings_update_downloading_summary">%1$s of %2$s</string>
+    <string name="settings_update_ready">Version %1$s is ready to install</string>
+    <string name="settings_update_ready_summary">Android will ask you to confirm. It installs over this copy, so your journey and sketches stay where they are.</string>
+    <string name="settings_update_install">Install</string>
+    <string name="settings_update_failed">The download didn\'t finish</string>
+    <string name="settings_update_failed_summary">Nothing was installed.</string>
+    <string name="settings_update_corrupt">The download didn\'t match GitHub\'s checksum</string>
+    <string name="settings_update_corrupt_summary">It was thrown away rather than installed. Try again, or download it yourself from the releases page.</string>
+    <string name="settings_update_retry">Try again</string>
+    <string name="settings_update_permission">Android needs your permission</string>
+    <string name="settings_update_permission_summary">Installing an update means allowing Sketch Seed to install apps. Grant it, then come back and tap Install.</string>
+    <string name="settings_update_permission_action">Open settings</string>
+    <string name="settings_update_notes">See what changed</string>
 
     <!-- Generic -->
     <string name="back">Back</string>

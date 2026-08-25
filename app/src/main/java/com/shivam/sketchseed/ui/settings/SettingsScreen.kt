@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -63,9 +64,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.shivam.sketchseed.BuildConfig
 import com.shivam.sketchseed.R
-import com.shivam.sketchseed.ai.TipAvailability
 import com.shivam.sketchseed.notify.ReminderSlot
 import com.shivam.sketchseed.ui.components.SectionHeader
+import com.shivam.sketchseed.update.UpdateChecker
 import java.time.LocalTime
 import java.util.Calendar
 
@@ -136,6 +137,7 @@ fun SettingsScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val consentRequest by viewModel.consentRequest.collectAsStateWithLifecycle()
+    val updateState by viewModel.update.state.collectAsStateWithLifecycle()
     val driveMessage by viewModel.driveMessage.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -143,8 +145,13 @@ fun SettingsScreen(
     var editingSlot by remember { mutableStateOf<ReminderSlot?>(null) }
 
     // The user may flip notifications in system settings and come straight back.
+    // The update check rides along: this is the moment the screen is in front of
+    // someone, and UpdateFlow decides whether enough time has passed to ask.
     LifecycleResumeEffect(viewModel) {
         viewModel.refreshNotificationState()
+        // The install permission may have been granted while we were away.
+        viewModel.update.refreshInstallPermission()
+        viewModel.update.checkOnOpen()
         onPauseOrDispose { }
     }
     var confirmingRestore by remember { mutableStateOf(false) }
@@ -396,42 +403,6 @@ fun SettingsScreen(
                 }
             }
 
-            // ── On-device AI ─────────────────────────────────────────────────
-            // Hidden entirely where Gemini Nano cannot run: a switch that can
-            // never be useful is worse than no switch at all.
-            if (state.showAiSection) {
-                Spacer(Modifier.height(24.dp))
-                HorizontalDivider()
-                Spacer(Modifier.height(24.dp))
-
-                SectionHeader(stringResource(R.string.settings_ai_header))
-
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.settings_ai_tips_title)) },
-                    supportingContent = {
-                        Text(stringResource(R.string.settings_ai_tips_summary))
-                    },
-                    trailingContent = {
-                        Switch(
-                            checked = state.settings.aiTipsEnabled,
-                            onCheckedChange = viewModel::setAiTipsEnabled,
-                        )
-                    },
-                )
-
-                Text(
-                    text = stringResource(
-                        if (state.aiAvailability == TipAvailability.READY) {
-                            R.string.settings_ai_status_available
-                        } else {
-                            R.string.settings_ai_status_downloadable
-                        },
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
             Spacer(Modifier.height(24.dp))
             HorizontalDivider()
             Spacer(Modifier.height(24.dp))
@@ -467,6 +438,19 @@ fun SettingsScreen(
                 text = stringResource(R.string.settings_about_version, BuildConfig.VERSION_NAME),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            UpdateRow(
+                state = updateState,
+                onCheck = viewModel.update::checkNow,
+                onDownload = viewModel.update::download,
+                onInstall = viewModel.update::install,
+                onOpenPermissionSettings = {
+                    openIntent(context, viewModel.update.installPermissionIntent)
+                },
+                onOpenReleaseNotes = { openUrl(context, UpdateChecker.RELEASES_PAGE_URL) },
             )
 
             Spacer(Modifier.height(40.dp))
@@ -568,6 +552,149 @@ fun SettingsScreen(
                 }
             },
         )
+    }
+}
+
+/**
+ * The one place an update is ever mentioned.
+ *
+ * Every state says what happened *and* what it means for the app on the phone,
+ * because the honest answer to most of them is "nothing changed" — a check that
+ * failed and a download that was thrown away both leave a working app, and
+ * saying so is the difference between an update prompt and an alarm.
+ */
+@Composable
+private fun UpdateRow(
+    state: UpdateState,
+    onCheck: () -> Unit,
+    onDownload: () -> Unit,
+    onInstall: () -> Unit,
+    onOpenPermissionSettings: () -> Unit,
+    onOpenReleaseNotes: () -> Unit,
+) {
+    val context = LocalContext.current
+
+    val headline = when (state) {
+        UpdateState.Idle -> stringResource(R.string.settings_update_check)
+        UpdateState.Checking -> stringResource(R.string.settings_update_checking)
+        UpdateState.UpToDate -> stringResource(R.string.settings_update_current)
+        UpdateState.CheckFailed -> stringResource(R.string.settings_update_check_failed)
+        is UpdateState.Available ->
+            stringResource(R.string.settings_update_available, state.release.version)
+
+        is UpdateState.Downloading ->
+            stringResource(R.string.settings_update_downloading, state.release.version)
+
+        is UpdateState.ReadyToInstall ->
+            stringResource(R.string.settings_update_ready, state.release.version)
+
+        is UpdateState.NeedsInstallPermission ->
+            stringResource(R.string.settings_update_permission)
+
+        is UpdateState.DownloadFailed -> stringResource(
+            if (state.corrupt) R.string.settings_update_corrupt else R.string.settings_update_failed,
+        )
+    }
+
+    val supporting = when (state) {
+        UpdateState.Idle -> stringResource(R.string.settings_update_check_summary)
+        UpdateState.Checking -> null
+        UpdateState.UpToDate -> stringResource(R.string.settings_update_current_summary)
+        UpdateState.CheckFailed -> stringResource(R.string.settings_update_check_failed_summary)
+        is UpdateState.Available -> stringResource(
+            R.string.settings_update_available_summary,
+            state.release.name,
+            Formatter.formatShortFileSize(context, state.release.apkSizeBytes),
+        )
+
+        is UpdateState.Downloading -> stringResource(
+            R.string.settings_update_downloading_summary,
+            Formatter.formatShortFileSize(context, state.downloadedBytes),
+            Formatter.formatShortFileSize(context, state.totalBytes),
+        )
+
+        is UpdateState.ReadyToInstall -> stringResource(R.string.settings_update_ready_summary)
+        is UpdateState.NeedsInstallPermission ->
+            stringResource(R.string.settings_update_permission_summary)
+
+        is UpdateState.DownloadFailed -> stringResource(
+            if (state.corrupt) {
+                R.string.settings_update_corrupt_summary
+            } else {
+                R.string.settings_update_failed_summary
+            },
+        )
+    }
+
+    // Only the states with nothing in flight re-check on a tap. Making the row
+    // clickable mid-download would offer to throw the download away by accident.
+    val onRowClick = when (state) {
+        UpdateState.Idle, UpdateState.UpToDate, UpdateState.CheckFailed -> onCheck
+        else -> null
+    }
+
+    ListItem(
+        headlineContent = { Text(headline) },
+        supportingContent = supporting?.let { { Text(it) } },
+        trailingContent = {
+            when (state) {
+                UpdateState.Checking -> CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                )
+
+                is UpdateState.Downloading -> CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                )
+
+                is UpdateState.Available -> Button(onClick = onDownload) {
+                    Text(stringResource(R.string.settings_update_download))
+                }
+
+                is UpdateState.ReadyToInstall -> Button(onClick = onInstall) {
+                    Text(stringResource(R.string.settings_update_install))
+                }
+
+                is UpdateState.NeedsInstallPermission ->
+                    Button(onClick = onOpenPermissionSettings) {
+                        Text(stringResource(R.string.settings_update_permission_action))
+                    }
+
+                is UpdateState.DownloadFailed -> OutlinedButton(onClick = onDownload) {
+                    Text(stringResource(R.string.settings_update_retry))
+                }
+
+                UpdateState.Idle, UpdateState.UpToDate, UpdateState.CheckFailed -> Unit
+            }
+        },
+        modifier = onRowClick?.let { Modifier.clickable(onClick = it) } ?: Modifier,
+    )
+
+    // Offered only once there is a specific release to read about.
+    if (state is UpdateState.Available || state is UpdateState.ReadyToInstall) {
+        TextButton(onClick = onOpenReleaseNotes) {
+            Icon(
+                Icons.AutoMirrored.Outlined.OpenInNew,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(stringResource(R.string.settings_update_notes))
+        }
+    }
+}
+
+/** Opens the releases page in whatever the user browses with. */
+private fun openUrl(context: Context, url: String) {
+    openIntent(context, Intent(Intent.ACTION_VIEW, url.toUri()))
+}
+
+private fun openIntent(context: Context, intent: Intent) {
+    try {
+        context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    } catch (e: ActivityNotFoundException) {
+        Log.w(TAG, "Nothing on this device could handle ${intent.action}", e)
     }
 }
 

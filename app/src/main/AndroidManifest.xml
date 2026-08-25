@@ -1,10 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Needed so AICore can fetch the on-device Gemini Nano model. The app
-         itself never talks to a server for the journey: no account, no sync,
-         no analytics. -->
+    <!-- Used by Google Drive backup and the update check, and by nothing else.
+         The journey itself never talks to a server: no account, no sync, no
+         analytics. -->
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Lets the app open the system installer for an update it downloaded.
+         It only permits *asking*: Android still shows its own install screen and
+         still refuses any APK not signed with this app's certificate. Granted by
+         the user in system settings, never by a dialog. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- Android 13+ asks the user before any notification can be posted. Denying
          it costs only the reminders; the rest of the app is unaffected. -->
@@ -55,6 +61,14 @@
           permission, and neither is BOOT_COMPLETED — WorkManager restores its own
           jobs across a reboot. Not exported: only the system sends these.
         -->
+        <!--
+          Receives the installer session's replies, including the one that asks
+          for the user's confirmation. Not exported: only the system sends these.
+        -->
+        <receiver
+            android:name=".update.InstallResultReceiver"
+            android:exported="false" />
+
         <receiver
             android:name=".notify.ClockChangeReceiver"
             android:exported="false">

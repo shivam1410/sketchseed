@@ -11,8 +11,8 @@ android {
 
     defaultConfig {
         applicationId = "com.shivam.sketchseed"
-        // API 26 is the floor for the ML Kit GenAI Prompt API and gives us
-        // java.time without desugaring.
+        // API 26 gives us java.time without desugaring, and is the floor for
+        // the package-installer session flow the update check hands off to.
         minSdk = 26
         targetSdk = 36
         versionCode = 6
@@ -78,7 +78,6 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.coil.compose)
     implementation(libs.androidx.exifinterface)
-    implementation(libs.mlkit.genai.prompt)
 
     implementation(libs.play.services.auth)
     implementation(libs.kotlinx.coroutines.play.services)

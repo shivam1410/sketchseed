@@ -7,9 +7,9 @@ The app never asks *"what do you want to draw today?"* — deciding is the part 
 kills the habit. It says *"here's today's sketch"* and gets out of the way.
 
 <p align="center">
-  <img src="docs/screenshots/01-today.png" width="30%" alt="Today: the day counter, one prompt, its difficulty, and an on-device drawing tip">
+  <img src="docs/screenshots/01-today.png" width="30%" alt="Today: the day counter, one prompt, and its difficulty">
   <img src="docs/screenshots/02-journey.png" width="30%" alt="Journey: completed days, streak, best streak and progress, over a grid of 100 days">
-  <img src="docs/screenshots/03-settings.png" width="30%" alt="Settings: Google Drive backup, plain zip export, and on-device AI">
+  <img src="docs/screenshots/03-settings.png" width="30%" alt="Settings: Google Drive backup, plain zip export, and reminders">
 </p>
 <p align="center">
   <em>Today · Journey · Settings — shown on a fresh install, so the grid is still locked.</em>
@@ -128,21 +128,12 @@ disposable.
 An earlier version used the ML Kit document scanner for its auto-crop and de-skew.
 That is gone: it framed sketching as document scanning, and it needed Play Services.
 
-## On-device AI
-
-**Gemini Nano** (`genai-prompt`, ML Kit Prompt API) generates an optional one-line
-drawing tip. This is a garnish, never a dependency: the API is beta, Gemini Nano is
-absent on plenty of hardware, and AICore will happily sit on a model download
-indefinitely. Every stage is therefore bounded by a timeout, the UI says whether it is
-*downloading the model* or *running inference* rather than showing an unqualified
-spinner, and every failure resolves to "no tip". It is off the critical path of
-marking a day done, and it can be switched off entirely.
-
-The base model lives in AICore and is shared system-wide, so this app does not pull
-down its own copy of Gemini Nano.
-
-Prompt packs are hand-curated on purpose. A generated list would undermine the
-difficulty ramp, which is the one thing a 100-day journey actually needs.
+**No AI.** An earlier version generated a one-line drawing tip with Gemini Nano, on
+the device. It is gone. It was a garnish on a screen whose entire premise is having
+nothing to decide, it was absent on most hardware, and keeping it meant carrying a beta
+dependency and a model-download state machine to sometimes say something a beginner's
+book says better. Prompt packs stay hand-curated for the same reason a generated list
+would undermine the difficulty ramp, which is the one thing a 100-day journey needs.
 
 ## Backup
 
@@ -222,16 +213,56 @@ slot was first created, and every reminder fired early by exactly that gap. Hour
 install of any age. Re-enqueueing resets the anchor, which is the only thing that makes
 the time you picked the time you get.
 
-## On-device AI, or none at all
+## Finding out there is a new version
 
-Gemini Nano is absent on plenty of hardware. Where `TipGenerator` reports the feature
-unsupported, **the nudge button and the entire On-device AI section are hidden** rather
-than shown greyed out — a permanently disabled switch advertises something the device
-will never do and invites prodding.
+This app is sideloaded, not installed from Play, so nothing tells you a new build
+exists. Every release so far relied on you going and looking, which means the restore
+fix in 1.2.2 — the one that stops a hand-edited backup deleting your sketches — only
+reached people who happened to check.
 
-That answer is cached, because it is a fact about the hardware and cannot change while
-the app runs. "Model not downloaded yet" is not cached, since a download completing
-flips it.
+**Settings asks GitHub, and nothing else does.** Opening Settings triggers one
+unauthenticated GET against the public releases feed, at most twice a day; tapping the
+row asks immediately. Nothing about you or the phone is sent, there is no account, and
+no other screen mentions updates. The Today screen is the one place the app has to stay
+out of the way, and a version number is not a reason to draw.
+
+Twice a day rather than every visit because the check rides on a screen you can open
+repeatedly in a minute, and the feed allows sixty calls an hour per address before it
+starts refusing. The timestamp is written even when a check *fails*, since a refusal is
+exactly when a retry loop would do the most damage.
+
+**A version it cannot read is not an update.** Tags are typed by hand, and this project
+has published both `v1.1` and `v1.1.1`, so the comparison pads the shorter side with
+zeros and compares components as numbers — `1.10` is after `1.9`, which sorting text
+gets backwards. A tag that will not parse, a draft, a pre-release, or a release with no
+APK attached all resolve to "say nothing". Offering to replace a working app is a claim
+worth being sure of.
+
+### Downloading and installing it
+
+Three separate things stand between a published APK and a replaced app, and only one of
+them is this app's own work:
+
+1. **Where it came from.** An asset URL that is not on a GitHub host is refused, so the
+   address being fetched is never simply whatever a field in the reply said.
+2. **What arrived.** The bytes are checked against the SHA-256 GitHub publishes before
+   anything is handed on. A truncated or altered download is thrown away rather than
+   shown to you as something to approve. Nothing to compare against is treated as a
+   failed check, not a passed one — that inversion is how verification becomes decor.
+3. **What it may replace.** Android refuses to install an APK signed with a different
+   certificate over an installed app. That is the real guarantee, it belongs to the
+   platform rather than to this code, and nothing here can weaken it.
+
+The install itself is always yours. The app opens the system installer and Android asks;
+it cannot install anything silently, and `REQUEST_INSTALL_PACKAGES` only buys the right
+to *ask*. That permission is granted by you in system settings and never by a dialog, so
+the app checks at the moment you tap Install and sends you there if it is missing —
+asking earlier would be a question with no context attached.
+
+The download lands in the cache directory, which is cleared at the start of every
+attempt: there is no resume story here, and a cache quietly filling with old APKs is the
+kind of failure nobody notices. It is written under a temporary name and renamed only
+once verified, so an interrupted transfer can never be mistaken for a finished file.
 
 ## Extra sketches
 
@@ -251,11 +282,12 @@ Single-module Kotlin app.
   small records, so it is one JSON blob rather than a database. No Room, no schema
   migrations, no annotation processor.
 - Coil 3 for image loading
-- No authentication, no backend, no analytics
+- No authentication, no backend, no analytics. The only servers the app ever talks to
+  are your own Google Drive, and GitHub's public releases feed when Settings is open.
 
 | | |
 |---|---|
-| minSdk | 26 (floor for the ML Kit Prompt API) |
+| minSdk | 26 (`java.time` without desugaring, per-app install permission) |
 | compileSdk / targetSdk | 36 |
 | AGP / Gradle / JDK | 8.13.2 / 8.14.3 / 17 |
 
@@ -264,12 +296,18 @@ Single-module Kotlin app.
 ```
 domain/     pure Kotlin — streaks, journey rules, models (unit tested)
 data/       DataStore repositories, prompt pack loading, photo storage
-ai/         Gemini Nano tip generation
+backup/     Drive client, archive format, restore
+notify/     reminder scheduling and the slots
+update/     release check, version comparison, APK verification (unit tested)
 ui/         Compose screens, one package per screen
 ```
 
 `domain/` has no Android dependencies, which is why the rules that matter — streak
-maths, the reveal logic, and back-filling — are covered by fast JVM tests.
+maths, the reveal logic, and back-filling — are covered by fast JVM tests. The same
+applies to the parts of `update/` that decide anything: version comparison, reading the
+releases feed, the check interval, and the digest check are all plain Kotlin, and the
+feed parser is pinned against a reply GitHub really sent so an upstream rename shows up
+as a failing test rather than as a check that silently never finds anything.
 
 ## Building
 
@@ -297,7 +335,7 @@ Or open the project in Android Studio and run it.
 ./gradlew assembleRelease
 ```
 
-Produces a minified ~2.9 MB APK at `app/build/outputs/apk/release/app-release.apk`,
+Produces a minified ~2.3 MB APK at `app/build/outputs/apk/release/app-release.apk`,
 installable by anyone who sideloads it.
 
 It is signed with the **debug** certificate on purpose. Drive authorization is bound to

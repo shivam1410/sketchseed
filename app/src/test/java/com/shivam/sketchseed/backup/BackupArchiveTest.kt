@@ -39,7 +39,6 @@ class BackupArchiveTest {
         difficulty = Difficulty.EASY,
         completedOnEpochDay = 20_667L + day,
         photoFileName = photo,
-        tip = if (day == 1) "Start with the silhouette." else null,
     )
 
     private fun photoFile(name: String, content: String): File =
@@ -87,10 +86,9 @@ class BackupArchiveTest {
     }
 
     @Test
-    fun `tips and photo names survive the round trip`() {
+    fun `photo names survive the round trip`() {
         val restored = readArchive(writeArchive(listOf(record(1, "day-001.jpg"))))
 
-        assertEquals("Start with the silhouette.", restored.records.first().tip)
         assertEquals("day-001.jpg", restored.records.first().photoFileName)
     }
 

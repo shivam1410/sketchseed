@@ -1,6 +1,5 @@
 package com.shivam.sketchseed.ui.today
 
-import android.text.format.Formatter
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,14 +18,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -166,13 +162,10 @@ fun TodayScreen(
                 is TodayMode.Draw -> DrawBlock(
                     prompt = mode.prompt,
                     progress = state.progress,
-                    tip = state.tip,
                     savingPhoto = state.savingPhoto,
                     onFindReferences = { searchFor = mode.prompt.text },
                     onMarkDone = viewModel::markDone,
                     onAddPhoto = addPhoto,
-                    onRequestTip = viewModel::requestTip,
-                    onDismissTip = viewModel::dismissTip,
                 )
 
                 is TodayMode.Rest -> RestBlock(
@@ -310,13 +303,10 @@ private fun CatchUpLink(count: Int, onClick: () -> Unit) {
 private fun DrawBlock(
     prompt: Prompt,
     progress: JourneyProgress?,
-    tip: TipState,
     savingPhoto: Boolean,
     onFindReferences: () -> Unit,
     onMarkDone: () -> Unit,
     onAddPhoto: () -> Unit,
-    onRequestTip: () -> Unit,
-    onDismissTip: () -> Unit,
 ) {
     Spacer(Modifier.height(48.dp))
 
@@ -347,9 +337,6 @@ private fun DrawBlock(
 
     Spacer(Modifier.height(16.dp))
     DifficultyChip(prompt.difficulty)
-    Spacer(Modifier.height(24.dp))
-
-    TipSection(tip = tip, onRequestTip = onRequestTip, onDismissTip = onDismissTip)
 
     Spacer(Modifier.height(28.dp))
 
@@ -395,74 +382,6 @@ private fun PhotoButton(
         }
         Spacer(Modifier.width(8.dp))
         Text(stringResource(labelId))
-    }
-}
-
-@Composable
-private fun TipSection(
-    tip: TipState,
-    onRequestTip: () -> Unit,
-    onDismissTip: () -> Unit,
-) {
-    val context = LocalContext.current
-
-    when (tip) {
-        TipState.Hidden -> Unit
-
-        TipState.Idle -> TextButton(onClick = onRequestTip) {
-            Icon(
-                Icons.Outlined.AutoAwesome,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-            )
-            Spacer(Modifier.width(6.dp))
-            Text(stringResource(R.string.tip_get))
-        }
-
-        TipState.Working -> BusyRow(stringResource(R.string.tip_generating))
-
-        is TipState.Preparing -> BusyRow(
-            // Say what is actually happening: this is a model download, not
-            // inference, and it can take minutes on first use.
-            if (tip.bytesDownloaded > 0) {
-                stringResource(
-                    R.string.tip_preparing,
-                    Formatter.formatShortFileSize(context, tip.bytesDownloaded),
-                )
-            } else {
-                stringResource(R.string.tip_preparing_starting)
-            },
-        )
-
-        is TipState.Ready -> Card(
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            ),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(Modifier.padding(16.dp)) {
-                Text(
-                    text = stringResource(R.string.tip_heading).uppercase(),
-                    style = OverlineStyle,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Spacer(Modifier.height(6.dp))
-                Text(text = tip.text, style = MaterialTheme.typography.bodyMedium)
-                TextButton(onClick = onDismissTip, modifier = Modifier.align(Alignment.End)) {
-                    Text(stringResource(R.string.close))
-                }
-            }
-        }
-
-        is TipState.Error -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = stringResource(tip.messageId),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-            TextButton(onClick = onRequestTip) { Text(stringResource(R.string.tip_get)) }
-        }
     }
 }
 

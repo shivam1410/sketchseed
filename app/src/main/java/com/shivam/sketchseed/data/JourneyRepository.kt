@@ -53,23 +53,17 @@ class JourneyRepository(
         prompt: Prompt,
         completedAt: LocalDateTime,
         photoFileName: String? = null,
-        tip: String? = null,
     ) = mutate { current ->
         if (current.any { it.day == prompt.day }) {
             current
         } else {
-            current + DayRecord.of(prompt, completedAt, photoFileName, tip)
+            current + DayRecord.of(prompt, completedAt, photoFileName)
         }
     }
 
     /** Attaches or replaces the sketch photo for an already-finished day. */
     suspend fun setPhoto(day: Int, photoFileName: String?) = mutate { current ->
         current.map { if (it.day == day) it.copy(photoFileName = photoFileName) else it }
-    }
-
-    /** Caches a generated tip so it is not regenerated every time the day is opened. */
-    suspend fun setTip(day: Int, tip: String?) = mutate { current ->
-        current.map { if (it.day == day) it.copy(tip = tip) else it }
     }
 
     /**

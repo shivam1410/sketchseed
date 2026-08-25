@@ -2,6 +2,10 @@
 <!--
   Only the one directory the camera writes into is shared. Everything else,
   including the saved sketches themselves, stays private to the app.
+
+  A downloaded update deliberately does *not* appear here: it is streamed
+  straight into an installer session rather than handed over as a URI, so
+  nothing outside the app ever needs to read it.
 -->
 <paths>
     <cache-path

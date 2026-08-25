@@ -42,7 +42,6 @@ data class DayRecord(
      */
     val completedAtEpochSecond: Long? = null,
     val photoFileName: String? = null,
-    val tip: String? = null,
     /**
      * Bonus sketches drawn the same day. Never counted toward the hundred; see
      * [ExtraSketch].
@@ -71,7 +70,6 @@ data class DayRecord(
             prompt: Prompt,
             completedAt: LocalDateTime,
             photoFileName: String? = null,
-            tip: String? = null,
         ): DayRecord = DayRecord(
             day = prompt.day,
             promptText = prompt.text,
@@ -79,7 +77,6 @@ data class DayRecord(
             completedOnEpochDay = DrawingDay.of(completedAt).toEpochDay(),
             completedAtEpochSecond = completedAt.toEpochSecond(ZoneOffset.UTC),
             photoFileName = photoFileName,
-            tip = tip,
         )
     }
 }

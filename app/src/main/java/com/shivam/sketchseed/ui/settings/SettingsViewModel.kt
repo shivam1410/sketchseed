@@ -11,7 +11,6 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.shivam.sketchseed.AppContainer
 import com.shivam.sketchseed.SketchSeedApplication
-import com.shivam.sketchseed.ai.TipAvailability
 import com.shivam.sketchseed.backup.AuthOutcome
 import com.shivam.sketchseed.backup.AutoBackupScheduler
 import com.shivam.sketchseed.backup.BackupOutcome
@@ -32,24 +31,12 @@ import kotlinx.coroutines.launch
 data class SettingsUiState(
     val settings: Settings = Settings(),
     val usage: PhotoUsage = PhotoUsage(),
-    /** Null while still being probed. */
-    val aiAvailability: TipAvailability? = null,
     val completedCount: Int = 0,
     val busy: Boolean = false,
     val driveBusy: Boolean = false,
     /** False when Android has notifications switched off for the whole app. */
     val notificationsAllowed: Boolean = true,
-) {
-    /**
-     * Whether to show the AI section at all.
-     *
-     * A permanently greyed-out switch is worse than no switch: it advertises a
-     * feature the device will never have and invites the user to keep prodding
-     * it. Null means still probing, so keep it hidden until we know.
-     */
-    val showAiSection: Boolean
-        get() = aiAvailability != null && aiAvailability != TipAvailability.UNSUPPORTED
-}
+)
 
 private data class Flags(
     val busy: Boolean,
@@ -63,7 +50,6 @@ private enum class DriveAction { BACK_UP, RESTORE }
 class SettingsViewModel(private val container: AppContainer) : ViewModel() {
 
     private val usage = MutableStateFlow(PhotoUsage())
-    private val aiAvailability = MutableStateFlow<TipAvailability?>(null)
     private val busy = MutableStateFlow(false)
     private val driveBusy = MutableStateFlow(false)
     private val notificationsAllowed = MutableStateFlow(true)
@@ -78,25 +64,23 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
 
     private var pendingAction: DriveAction? = null
 
+    /** Finding and fetching a newer release. See [UpdateFlow]. */
+    val update = UpdateFlow(container = container, scope = viewModelScope)
+
     init {
         refreshUsage()
         refreshNotificationState()
-        viewModelScope.launch {
-            aiAvailability.value = container.tipGenerator.availability()
-        }
     }
 
     val uiState: StateFlow<SettingsUiState> = combine(
         container.settingsRepository.settings,
         container.journeyRepository.records.map { it.size },
         usage,
-        aiAvailability,
         combine(busy, driveBusy, notificationsAllowed, ::Flags),
-    ) { settings, completed, photoUsage, availability, flags ->
+    ) { settings, completed, photoUsage, flags ->
         SettingsUiState(
             settings = settings,
             usage = photoUsage,
-            aiAvailability = availability,
             completedCount = completed,
             busy = flags.busy,
             driveBusy = flags.driveBusy,
@@ -119,10 +103,6 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
                 AutoBackupScheduler.cancel(container.appContext)
             }
         }
-    }
-
-    fun setAiTipsEnabled(enabled: Boolean) {
-        viewModelScope.launch { container.settingsRepository.setAiTipsEnabled(enabled) }
     }
 
     fun setRemindersEnabled(enabled: Boolean) {
