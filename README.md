@@ -259,6 +259,15 @@ to *ask*. That permission is granted by you in system settings and never by a di
 the app checks at the moment you tap Install and sends you there if it is missing —
 asking earlier would be a question with no context attached.
 
+**Play Protect gets a say too, and it is worth expecting.** On a phone signed in to a
+Google account, confirming the install is usually followed by *"App scan recommended —
+Play Protect hasn't seen this app before"*. That is Google reacting to a sideloaded APK
+with few installs, not to anything about this one, and it appears however the APK
+arrived. Either choice gets you there: **Scan app** sends it to Google and continues, or
+**More details → Install without scanning** skips it. Nothing in the app can pre-empt
+this, and nothing should — it is the platform telling you it does not recognise what you
+are installing, which is exactly true.
+
 The download lands in the cache directory, which is cleared at the start of every
 attempt: there is no resume story here, and a cache quietly filling with old APKs is the
 kind of failure nobody notices. It is written under a temporary name and renamed only
